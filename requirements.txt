@@ -1,0 +1,7 @@
+# Core dependencies for Team 3: LLM Intelligence & Evaluation
+# Standard dependencies (Python 3.9+)
+
+pydantic>=2.0.0
+requests>=2.28.0
+tabulate>=0.9.0
+pytest>=7.0.0
