@@ -44,14 +44,14 @@ Our project is divided across 4 student teams working like a relay race:
 
 ---
 
-## Core Components (Our 3 Presentation Slides)
+## Core Components
 
-### 1. Model-Agnostic Gateway (`llm/gateway/`) — *Slide 1*
+### 1. Model-Agnostic Gateway (`llm/gateway/`)
 * **Why it matters:** UNICC handles sensitive cyber data. In real-world deployment, they want the AI to run **locally and privately** (using Ollama / Llama-3) so no data leaves the UN network. But during development, we also want to test with **Cloud APIs** (like OpenAI or Gemini).
 * **What we built:** A simple adapter system where you can switch models with just one word (`backend="local"`, `"api"`, or `"mock"`).
 * **Offline Mock Provider:** Includes a built-in mock mode that runs immediately on any computer with **zero setup, zero API keys, and no GPU required**.
 
-### 2. The 3 Core Workflows (`llm/workflows/`) — *Slide 2*
+### 2. The 3 Core Workflows (`llm/workflows/`)
 * **Workflow 1: Report Summarizer (`summarizer.py`)**  
   Turns long, multi-page security advisories into clean summaries covering the threat level, affected software, and immediate mitigations.
 * **Workflow 2: Entity Extractor (`extractor.py`)**  
@@ -59,7 +59,7 @@ Our project is divided across 4 student teams working like a relay race:
 * **Workflow 3: Evidence-Grounded Investigator (`investigator.py`)**  
   Takes a new threat query + historical evidence from Team 2 and writes an investigation assessment. It requires the AI to **cite the exact document ID and quote** for every claim to prevent hallucinations.
 
-### 3. Evaluation & Benchmarking (`evaluation/`) — *Slide 3*
+### 3. Evaluation & Benchmarking (`evaluation/`)
 * **Why it matters:** We don't just guess if our AI is good; we measure it mathematically.
 * **What we built:** An automated benchmark runner that tests our system against realistic threat cases and measures:
   * **Entity Extraction F1 Score:** Did the AI extract the right CVEs and IPs?
