@@ -168,7 +168,7 @@ unicc-cyber-ai/
 │       ├── summarizer.py            # Workflow 1 implementation
 │       ├── extractor.py             # Workflow 2 implementation
 │       └── investigator.py          # Workflow 3 implementation
-├── evaluation/                      # Slide 3 Evaluation Benchmark
+├── evaluation/                      # Evaluation Benchmark & Metrics
 │   ├── benchmark_data.py            # Real threat test cases (Lazarus, LockBit, ThreatFox)
 │   ├── metrics.py                   # Precision, Recall, F1 & Groundedness math
 │   └── evaluate_team3.py            # Automated scorecard runner

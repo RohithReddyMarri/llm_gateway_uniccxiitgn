@@ -81,7 +81,7 @@ def main():
     )
 
     # 2. Workflow 1: Report Summarization
-    print_banner("Workflow 1: Report Summarization (Slide 2)")
+    print_banner("Workflow 1: Report Summarization")
     print("Input: 150-word raw threat advisory")
     print("Executing ReportSummarizer...")
     summarizer = ReportSummarizer(provider)
@@ -101,7 +101,7 @@ def main():
         print(f"    * {mit}")
 
     # 3. Workflow 2: Structured Entity Extraction
-    print_banner("Workflow 2: Structured Cybersecurity Entity Extraction (Slide 2)")
+    print_banner("Workflow 2: Structured Cybersecurity Entity Extraction")
     print("Executing CyberEntityExtractor...")
     extractor = CyberEntityExtractor(provider)
     entities = extractor.extract(sample_report)
@@ -129,7 +129,7 @@ def main():
         print(f"    * [{i_type.upper()}] {i_val} ({i_ctx})")
 
     # 4. Workflow 3: Evidence-Grounded Threat Investigation (RAG)
-    print_banner("Workflow 3: Evidence-Grounded Threat Investigation / RAG (Slide 2 & 3)")
+    print_banner("Workflow 3: Evidence-Grounded Threat Investigation / RAG")
     new_observation = "Outbound connection detected to IP 185.123.45.10 with suspicious memory execution."
     print(f"Investigator Query / Observation: '{new_observation}'")
     print("Retrieving historical evidence matches from Team 2 Knowledge Base...")
