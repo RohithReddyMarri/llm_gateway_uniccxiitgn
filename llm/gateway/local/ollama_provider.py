@@ -53,7 +53,7 @@ class OllamaLocalProvider(LLMProvider):
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
+            with urllib.request.urlopen(req, timeout=180) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 return result.get("response", "")
         except urllib.error.URLError as e:
