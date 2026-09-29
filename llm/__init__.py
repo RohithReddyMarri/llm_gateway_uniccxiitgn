@@ -50,19 +50,20 @@ def extract_entities(
 
 def investigate_threat(
     observation: str,
-    retrieved_evidence: List[Dict[str, Any]],
+    retrieved_evidence: Any = None,
+    team2_api_url: Optional[str] = None,
     backend: Optional[str] = None,
     model_name: Optional[str] = None,
     **kwargs
 ) -> Dict[str, Any]:
     """
     Evidence-grounded threat investigation (RAG).
-    Takes a new threat query and Team 2's historical evidence,
+    Takes a new threat query and Team 2's historical evidence (or queries Team 2's API automatically),
     and returns a citation-backed assessment dictionary/JSON for Team 4.
     """
     provider = get_llm_provider(backend=backend, model_name=model_name, **kwargs)
     investigator = ThreatInvestigator(provider)
-    result = investigator.investigate(observation, retrieved_evidence)
+    result = investigator.investigate(observation, retrieved_evidence, team2_api_url=team2_api_url)
     return result.to_dict() if hasattr(result, "to_dict") else result
 
 

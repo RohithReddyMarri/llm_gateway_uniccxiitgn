@@ -26,16 +26,16 @@ from evaluation.metrics import calculate_prf1, calculate_groundedness_score
 class TestTeam3Workflows(unittest.TestCase):
 
     def setUp(self):
-        self.provider = get_llm_provider(backend="mock")
+        self.provider = get_llm_provider(backend="local")
         self.sample_text = (
             "In August 2026, Lazarus Group exploited CVE-2024-38077 and deployed GhostPulse. "
             "C2 node identified at 185.123.45.10."
         )
 
-    def test_mock_gateway_instantiation(self):
-        """Verify model-agnostic gateway factory correctly instantiates Mock provider."""
+    def test_local_gateway_instantiation(self):
+        """Verify model-agnostic gateway factory correctly instantiates Local Ollama provider."""
         self.assertIsNotNone(self.provider)
-        self.assertEqual(self.provider.model_name, "mock-cyber-v1")
+        self.assertEqual(self.provider.model_name, "llama3:8b")
 
     def test_report_summarizer_workflow(self):
         """Verify Workflow 1 produces valid ThreatReportSummary."""
@@ -94,16 +94,16 @@ class TestTeam3Workflows(unittest.TestCase):
         """Verify 1-line integration helper functions return valid dicts directly."""
         from llm import summarize_report, extract_entities, investigate_threat
 
-        summary_dict = summarize_report(self.sample_text, backend="mock")
+        summary_dict = summarize_report(self.sample_text)
         self.assertIsInstance(summary_dict, dict)
         self.assertIn("executive_summary", summary_dict)
 
-        entities_dict = extract_entities(self.sample_text, backend="mock")
+        entities_dict = extract_entities(self.sample_text)
         self.assertIsInstance(entities_dict, dict)
         self.assertIn("vulnerabilities", entities_dict)
 
         evidence = [{"document_id": "ENISA-2026-088", "relevance_score": 0.94, "content": "Proof"}]
-        inv_dict = investigate_threat("Observed threat", evidence, backend="mock")
+        inv_dict = investigate_threat("Observed threat", evidence)
         self.assertIsInstance(inv_dict, dict)
         self.assertIn("match_status", inv_dict)
 

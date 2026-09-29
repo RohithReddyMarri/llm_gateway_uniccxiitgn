@@ -96,6 +96,6 @@ def run_benchmark(backend: str = "mock"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Team 3 LLM Evaluation Benchmark")
-    parser.add_argument("--backend", default="mock", choices=["mock", "local", "api"], help="LLM backend to evaluate")
+    parser.add_argument("--backend", default="local", choices=["local", "api"], help="LLM backend to evaluate (local: Ollama on-premise, api: cloud provider)")
     args = parser.parse_args()
     run_benchmark(backend=args.backend)

@@ -6,7 +6,6 @@ Provides zero-downtime, model-agnostic switching without touching downstream app
 from typing import Optional, Dict, Any
 import os
 from .interface import LLMProvider
-from .mock_provider import MockLLMProvider
 from .local.ollama_provider import OllamaLocalProvider
 from .api.api_provider import APILLMProvider
 
@@ -21,19 +20,13 @@ def get_llm_provider(
     Factory to retrieve an initialized LLMProvider instance.
 
     Args:
-        backend: "mock", "local", or "api". Defaults to LLM_BACKEND env var or "mock".
+        backend: "local" (Ollama) or "api" (Cloud). Defaults to LLM_BACKEND env var or "local".
         model_name: Optional model identifier (e.g., 'llama3:8b', 'gpt-4o-mini').
         config: Optional configuration dictionary.
     """
-    selected_backend = (backend or os.getenv("LLM_BACKEND", "mock")).strip().lower()
+    selected_backend = (backend or os.getenv("LLM_BACKEND", "local")).strip().lower()
 
-    if selected_backend == "mock":
-        return MockLLMProvider(
-            model_name=model_name or "mock-cyber-v1",
-            config=config,
-        )
-
-    elif selected_backend in ("local", "onprem", "ollama"):
+    if selected_backend in ("local", "onprem", "ollama"):
         host = kwargs.get("host") or os.getenv("OLLAMA_HOST", "http://localhost:11434")
         return OllamaLocalProvider(
             model_name=model_name or os.getenv("LOCAL_MODEL_NAME", "llama3:8b"),
@@ -53,5 +46,6 @@ def get_llm_provider(
     else:
         raise ValueError(
             f"Unknown LLM backend: '{selected_backend}'. "
-            f"Supported backends are: 'mock', 'local', 'api'."
+            f"Supported backends are: 'local' (Ollama on-premise) or 'api' (Cloud)."
         )
+

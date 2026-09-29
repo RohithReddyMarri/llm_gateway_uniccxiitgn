@@ -42,9 +42,9 @@ def main():
     parser = argparse.ArgumentParser(description="Run UNICC Team 3 LLM Intelligence Demo")
     parser.add_argument(
         "--backend",
-        default="mock",
-        choices=["mock", "local", "api"],
-        help="LLM backend to use (mock: offline testing, local: Ollama, api: cloud provider)"
+        default="local",
+        choices=["local", "api"],
+        help="LLM backend to use (local: Ollama on-premise, api: cloud provider)"
     )
     parser.add_argument(
         "--model",

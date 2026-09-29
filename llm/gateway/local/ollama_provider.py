@@ -38,6 +38,7 @@ class OllamaLocalProvider(LLMProvider):
             "prompt": prompt,
             "system": system_prompt or "You are a cybersecurity intelligence analyst.",
             "stream": False,
+            "format": "json",
             "options": {
                 "temperature": temperature,
                 "num_predict": max_tokens,

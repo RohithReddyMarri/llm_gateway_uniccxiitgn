@@ -3,11 +3,11 @@ Schema for Workflow 3: Evidence-Grounded Threat Investigation (RAG).
 Synthesizes retrieved historical evidence into an analyst-facing report with strict citations.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 import json
 
 try:
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel, Field, field_validator
     PYDANTIC_AVAILABLE = True
 except ImportError:
     PYDANTIC_AVAILABLE = False
@@ -18,21 +18,35 @@ if PYDANTIC_AVAILABLE:
         document_id: str = Field(..., description="ID or title of the historical report/log")
         relevance_score: Optional[float] = Field(None, description="Similarity score from Team 2 retrieval")
         key_excerpt: str = Field(..., description="Direct quote or specific evidence extracted from source")
-        observed_overlap: List[str] = Field(default_factory=list, description="Shared indicators (e.g. same IP or CVE)")
+        observed_overlap: Union[List[str], str] = Field(default_factory=list, description="Shared indicators (e.g. same IP or CVE)")
+
+        @field_validator("observed_overlap", mode="before")
+        @classmethod
+        def coerce_overlap_to_list(cls, v: Any):
+            if isinstance(v, str):
+                return [v] if v else []
+            return v or []
 
     class InvestigationResult(BaseModel):
         query_observation: str = Field(..., description="The observed suspicious indicator or threat under review")
         match_status: str = Field(..., description="Match category: Exact, Strong, Partial, Weak, or Unsupported")
         assessment_narrative: str = Field(..., description="Synthesized contextual assessment grounded in evidence")
-        potential_threat_actors: List[str] = Field(default_factory=list, description="Identified threat actors in historical matches")
-        associated_malware: List[str] = Field(default_factory=list, description="Associated malware families in evidence")
-        associated_cves: List[str] = Field(default_factory=list, description="Associated CVE vulnerabilities")
+        potential_threat_actors: Union[List[str], str] = Field(default_factory=list, description="Identified threat actors in historical matches")
+        associated_malware: Union[List[str], str] = Field(default_factory=list, description="Associated malware families in evidence")
+        associated_cves: Union[List[str], str] = Field(default_factory=list, description="Associated CVE vulnerabilities")
         confidence_level: str = Field("Medium", description="Confidence level: High, Medium, Low")
         supporting_citations: List[EvidenceCitation] = Field(default_factory=list, description="Documented evidence citations")
         investigator_notes: str = Field(
             default="AI-assisted assessment. Requires verification by human cybersecurity analyst.",
             description="Human-in-the-loop reminder"
         )
+
+        @field_validator("potential_threat_actors", "associated_malware", "associated_cves", mode="before")
+        @classmethod
+        def coerce_strings_to_list(cls, v: Any):
+            if isinstance(v, str):
+                return [v] if v else []
+            return v or []
 
         def to_dict(self):
             return self.model_dump()

@@ -48,8 +48,8 @@ Our project is divided across 4 student teams working like a relay race:
 
 ### 1. Model-Agnostic Gateway (`llm/gateway/`)
 * **Why it matters:** UNICC handles sensitive cyber data. In real-world deployment, they want the AI to run **locally and privately** (using Ollama / Llama-3) so no data leaves the UN network. But during development, we also want to test with **Cloud APIs** (like OpenAI or Gemini).
-* **What we built:** A simple adapter system where you can switch models with just one word (`backend="local"`, `"api"`, or `"mock"`).
-* **Offline Mock Provider:** Includes a built-in mock mode that runs immediately on any computer with **zero setup, zero API keys, and no GPU required**.
+* **What we built:** A simple adapter system where you can switch models with just one parameter (`backend="local"` or `"api"`).
+* **On-Premise Privacy by Default:** Defaults to local Ollama (`llama3:8b`) running on `http://localhost:11434`, ensuring complete offline data privacy for UN security reports.
 
 ### 2. The 3 Core Workflows (`llm/workflows/`)
 * **Workflow 1: Report Summarizer (`summarizer.py`)**  
@@ -57,7 +57,7 @@ Our project is divided across 4 student teams working like a relay race:
 * **Workflow 2: Entity Extractor (`extractor.py`)**  
   Scans unstructured text and extracts structured indicators (CVEs, IP addresses, domains, file hashes, malware strains) compatible with UNICC feeds like **Abuse.ch ThreatFox** and **Shadowserver**.
 * **Workflow 3: Evidence-Grounded Investigator (`investigator.py`)**  
-  Takes a new threat query + historical evidence from Team 2 and writes an investigation assessment. It requires the AI to **cite the exact document ID and quote** for every claim to prevent hallucinations.
+  Takes a new threat query + historical evidence from Team 2 and writes an investigation assessment. It natively parses Team 2's retrieval response schema and requires the AI to **cite the exact document ID and quote** for every claim to prevent hallucinations.
 
 ### 3. Evaluation & Benchmarking (`evaluation/`)
 * **Why it matters:** We don't just guess if our AI is good; we measure it mathematically.
@@ -72,7 +72,8 @@ Our project is divided across 4 student teams working like a relay race:
 
 ### Requirements
 - Python 3.9 or newer.
-- Install dependencies (optional for mock mode, standard libraries are supported):
+- Local Ollama installed with `llama3:8b` (e.g. `ollama run llama3:8b`).
+- Install dependencies:
   ```bash
   pip install -r requirements.txt
   ```
@@ -80,16 +81,10 @@ Our project is divided across 4 student teams working like a relay race:
 ---
 
 ### Option 1: Run the Interactive Demo
-See all 3 workflows run end-to-end right in your terminal:
+See all 3 workflows run end-to-end with local Ollama right in your terminal:
 
 ```bash
 python run_team3_demo.py
-```
-*(By default, this runs in offline mock mode so you can test it instantly without any API keys).*
-
-To run with a local Ollama model (e.g., Llama-3):
-```bash
-python run_team3_demo.py --backend local --model llama3:8b
 ```
 
 To run with a cloud API:
@@ -100,7 +95,16 @@ python run_team3_demo.py --backend api --model gpt-4o-mini
 
 ---
 
-### Option 2: Run the Evaluation Benchmark
+### Option 2: Live Team 2 Retrieval + Team 3 AI Integration
+Test end-to-end integration between Team 2's retrieval API (`POST /api/v1/threats/match`) and Team 3's local AI reasoning engine:
+
+```bash
+python integrate_with_team2_api.py
+```
+
+---
+
+### Option 3: Run the Evaluation Benchmark
 Run our benchmark suite to calculate Precision, Recall, F1, and Grounding scores:
 
 ```bash
@@ -109,7 +113,7 @@ python evaluation/evaluate_team3.py
 
 ---
 
-### Option 3: Run Automated Unit Tests
+### Option 4: Run Automated Unit Tests
 Run our test suite to verify all schemas, gateway adapters, and workflows:
 
 ```bash
@@ -132,6 +136,7 @@ summary = summarize_report(raw_report_text)
 entities = extract_entities(raw_log_text)
 
 # 3. Investigate a new threat -> returns citation-backed JSON dictionary
+# Accepts raw Team 2 API match results directly or fetches automatically from Team 2 endpoint
 investigation = investigate_threat(
     observation="Suspicious connection to IP 185.123.45.10",
     retrieved_evidence=team2_search_results
@@ -148,15 +153,15 @@ unicc-cyber-ai/
 ├── requirements.txt                 # Python dependencies
 ├── .gitignore                       # Clean Git configuration
 ├── run_team3_demo.py                # Live interactive demo script
+├── integrate_with_team2_api.py      # End-to-end Team 2 API -> Team 3 AI integration
 ├── llm/
 │   ├── __init__.py                  # 1-line SDK functions for Team 4
 │   ├── gateway/                     # Model-Agnostic LLM Gateway
 │   │   ├── interface.py             # Common provider blueprint & JSON cleaner
-│   │   ├── mock_provider.py         # Instant offline provider
-│   │   ├── factory.py               # Model switcher (mock, local, api)
-│   │   ├── local/ollama_provider.py # Local Ollama adapter
+│   │   ├── factory.py               # Model switcher (local Ollama, cloud API)
+│   │   ├── local/ollama_provider.py # Local Ollama adapter (strict JSON format)
 │   │   └── api/api_provider.py      # Cloud API adapter
-│   ├── schemas/                     # Strict JSON data structures
+│   ├── schemas/                     # Strict JSON data structures (Pydantic)
 │   │   ├── report_summary.py        # Summary schema
 │   │   ├── cyber_entities.py        # CVEs, IOCs, Malware schema
 │   │   └── investigation.py         # Grounded investigation schema
@@ -167,7 +172,7 @@ unicc-cyber-ai/
 │   └── workflows/                   # Core pipeline logic
 │       ├── summarizer.py            # Workflow 1 implementation
 │       ├── extractor.py             # Workflow 2 implementation
-│       └── investigator.py          # Workflow 3 implementation
+│       └── investigator.py          # Workflow 3 implementation (Team 2 normalizer)
 ├── evaluation/                      # Evaluation Benchmark & Metrics
 │   ├── benchmark_data.py            # Real threat test cases (Lazarus, LockBit, ThreatFox)
 │   ├── metrics.py                   # Precision, Recall, F1 & Groundedness math
