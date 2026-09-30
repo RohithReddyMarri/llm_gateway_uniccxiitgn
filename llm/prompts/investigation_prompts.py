@@ -28,30 +28,54 @@ def build_investigation_prompt(
 ) -> str:
     """
     Builds the prompt combining newly observed threat details with retrieved historical evidence.
+    Enriched with Team 2's STIX Knowledge Graph relations, Confidence Tier, and Attribution.
     """
     evidence_text = ""
     for idx, doc in enumerate(retrieved_evidence, 1):
         doc_id = doc.get("document_id", f"DOC-{idx}")
         score = doc.get("relevance_score", "N/A")
+        tier = doc.get("confidence_tier")
+        stix = doc.get("stix_relationships", [])
+        attr = doc.get("attribution", {})
         content = doc.get("content", "").strip()
-        evidence_text += (
-            f"--- [EVIDENCE #{idx}] Document ID: {doc_id} (Relevance: {score}) ---\n"
-            f"{content}\n\n"
-        )
+
+        tier_str = f", Search Tier: {tier}" if tier else ""
+        evidence_text += f"--- [EVIDENCE #{idx}] Document ID: {doc_id} (Relevance Score: {score}{tier_str}) ---\n"
+
+        if attr:
+            attr_items = []
+            if isinstance(attr, dict):
+                for k, v in attr.items():
+                    if v:
+                        attr_items.append(f"  * {k.replace('_', ' ').title()}: {v}")
+            elif hasattr(attr, "model_dump"):
+                for k, v in attr.model_dump().items():
+                    if v:
+                        attr_items.append(f"  * {k.replace('_', ' ').title()}: {v}")
+            if attr_items:
+                evidence_text += "Matched Observables & Attribution:\n" + "\n".join(attr_items) + "\n"
+
+        if stix and isinstance(stix, list) and len(stix) > 0:
+            evidence_text += "MITRE ATT&CK STIX Relationships from Knowledge Graph:\n"
+            for rel in stix:
+                evidence_text += f"  * {rel}\n"
+
+        evidence_text += f"Document Content:\n{content}\n\n"
 
     return (
         f"NEWLY OBSERVED THREAT / QUERY:\n"
         f"{observation.strip()}\n\n"
-        f"RETRIEVED HISTORICAL EVIDENCE FROM KNOWLEDGE BASE (Team 2 Retrieval):\n"
+        f"RETRIEVED HISTORICAL EVIDENCE FROM KNOWLEDGE BASE (Team 2 Retrieval & STIX Graph):\n"
         f"{evidence_text}\n"
         f"TASK:\n"
         f"Synthesize the historical evidence and determine whether this threat has been documented previously. "
+        f"Incorporate any identified threat actors, malware families, and MITRE relationships from the evidence. "
         f"Provide your assessment in a JSON object with keys:\n"
         f"- query_observation: string\n"
         f"- match_status: 'Exact' | 'Strong' | 'Partial' | 'Weak' | 'Unsupported'\n"
         f"- assessment_narrative: detailed grounded synthesis\n"
-        f"- potential_threat_actors: list of strings\n"
-        f"- associated_malware: list of strings\n"
+        f"- potential_threat_actors: list of strings (include any threat actors from STIX graph/evidence)\n"
+        f"- associated_malware: list of strings (include any malware/tools identified in evidence)\n"
         f"- associated_cves: list of strings\n"
         f"- confidence_level: 'High' | 'Medium' | 'Low'\n"
         f"- supporting_citations: list of objects {{document_id, relevance_score, key_excerpt, observed_overlap}}\n"
