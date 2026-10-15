@@ -27,6 +27,9 @@ if PYDANTIC_AVAILABLE:
                 return [v] if v else []
             return v or []
 
+        def to_dict(self):
+            return self.model_dump()
+
     class PatchDetails(BaseModel):
         patch_status: str = Field(
             default="Unknown",
@@ -51,6 +54,9 @@ if PYDANTIC_AVAILABLE:
             if isinstance(v, str):
                 return [v] if v else []
             return v or []
+
+        def to_dict(self):
+            return self.model_dump()
 
     class InvestigationResult(BaseModel):
         query_observation: str = Field(..., description="The observed suspicious indicator or threat under review")
