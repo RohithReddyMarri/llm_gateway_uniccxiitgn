@@ -1,6 +1,10 @@
 """
-Curated Ground-Truth Benchmark Dataset for Team 3 Evaluation.
-Used to quantitatively assess Extraction F1, Summarization completeness, and Grounding.
+Curated Ground-Truth Benchmark Dataset for Team 3 LLM Intelligence & Evaluation.
+Used to quantitatively assess:
+1. Entity Extraction F1 (CVEs, IOCs, Malware Families, Threat Actors)
+2. Evidence Groundedness (Citations vs. Hallucinated IDs)
+3. Patch Identification Precision (Task 3.0: Status, Affected/Fixed Versions, Remediations)
+4. End-to-End Investigation Reasoning
 """
 
 BENCHMARK_CASES = [
@@ -19,6 +23,12 @@ BENCHMARK_CASES = [
             "malware_families": ["GhostPulse", "DarkComet RAT"],
             "cves": ["CVE-2024-38077", "CVE-2024-21410"],
             "iocs": ["185.123.45.10", "update-service-check.com"],
+        },
+        "ground_truth_patch": {
+            "patch_status": "Available",
+            "affected_versions": ["Windows Remote Desktop Licensing", "Microsoft Exchange Server"],
+            "fixed_versions": ["Cumulative Security Updates"],
+            "remediation_workarounds": ["Enforce MFA", "Apply vendor security updates"],
         },
         "retrieved_evidence": [
             {
@@ -49,6 +59,12 @@ BENCHMARK_CASES = [
             "cves": ["CVE-2023-4966"],
             "iocs": ["193.106.191.29"],
         },
+        "ground_truth_patch": {
+            "patch_status": "Available",
+            "affected_versions": ["Citrix NetScaler ADC", "NetScaler Gateway"],
+            "fixed_versions": ["NetScaler Firmware Update"],
+            "remediation_workarounds": ["Terminating active sessions", "Kill established sessions"],
+        },
         "retrieved_evidence": [
             {
                 "document_id": "NVD-CVE-2023-4966",
@@ -73,6 +89,12 @@ BENCHMARK_CASES = [
             "cves": [],
             "iocs": ["103.208.220.122", "check-finance-portal.org"],
         },
+        "ground_truth_patch": {
+            "patch_status": "Not Applicable",
+            "affected_versions": [],
+            "fixed_versions": [],
+            "remediation_workarounds": ["Block traffic to malicious C2 node", "Inspect process lineages"],
+        },
         "retrieved_evidence": [
             {
                 "document_id": "THREATFOX-IOC-2026-904",
@@ -81,6 +103,35 @@ BENCHMARK_CASES = [
             }
         ],
         "expected_match_status": "Exact",
+    },
+    {
+        "case_id": "TC-CYBER-004",
+        "description": "Zero-Day remote exploit in logging daemon without vendor patch",
+        "raw_text": (
+            "Zero-Day vulnerability warning: Security researchers reported active in-the-wild exploitation "
+            "of an unpatched remote code execution vulnerability (CVE-2026-99120) affecting OpenLogAgent versions 3.0 to 3.4.1. "
+            "No official vendor patch has been released yet. Threat group VoltTyphoon has been observed using this exploit. "
+            "Immediate workaround: administrators must disable the remote telemetry listener on port 9200 and isolate vulnerable hosts."
+        ),
+        "ground_truth_entities": {
+            "threat_actors": ["VoltTyphoon"],
+            "malware_families": [],
+            "cves": ["CVE-2026-99120"],
+            "iocs": ["port 9200"],
+        },
+        "ground_truth_patch": {
+            "patch_status": "Workaround Only",
+            "affected_versions": ["OpenLogAgent versions 3.0 to 3.4.1", "OpenLogAgent"],
+            "fixed_versions": [],
+            "remediation_workarounds": ["Disable remote telemetry listener on port 9200", "Isolate vulnerable hosts"],
+        },
+        "retrieved_evidence": [
+            {
+                "document_id": "CISA-ALERT-2026-012",
+                "relevance_score": 0.91,
+                "content": "Advisory on active exploitation of OpenLogAgent zero-day CVE-2026-99120. Vendor security patch is pending.",
+            }
+        ],
+        "expected_match_status": "Strong",
     }
 ]
-
