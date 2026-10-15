@@ -27,6 +27,31 @@ if PYDANTIC_AVAILABLE:
                 return [v] if v else []
             return v or []
 
+    class PatchDetails(BaseModel):
+        patch_status: str = Field(
+            default="Unknown",
+            description="Patch availability: 'Available' | 'No Official Patch' | 'Workaround Only' | 'Not Applicable'"
+        )
+        affected_versions: List[str] = Field(
+            default_factory=list,
+            description="Specific vulnerable software products, packages, and version ranges"
+        )
+        fixed_versions: List[str] = Field(
+            default_factory=list,
+            description="Official patch versions, security update bulletins (e.g. MS17-010), or patched releases"
+        )
+        remediation_workarounds: List[str] = Field(
+            default_factory=list,
+            description="Official mitigations or workarounds if unpatched or prior to update (e.g. disable protocol)"
+        )
+
+        @field_validator("affected_versions", "fixed_versions", "remediation_workarounds", mode="before")
+        @classmethod
+        def coerce_strings_to_list(cls, v: Any):
+            if isinstance(v, str):
+                return [v] if v else []
+            return v or []
+
     class InvestigationResult(BaseModel):
         query_observation: str = Field(..., description="The observed suspicious indicator or threat under review")
         match_status: str = Field(..., description="Match category: Exact, Strong, Partial, Weak, or Unsupported")
@@ -34,6 +59,10 @@ if PYDANTIC_AVAILABLE:
         potential_threat_actors: Union[List[str], str] = Field(default_factory=list, description="Identified threat actors in historical matches")
         associated_malware: Union[List[str], str] = Field(default_factory=list, description="Associated malware families in evidence")
         associated_cves: Union[List[str], str] = Field(default_factory=list, description="Associated CVE vulnerabilities")
+        patch_details: PatchDetails = Field(
+            default_factory=PatchDetails,
+            description="Details on patch availability, affected versions, fixed versions, and remediation workarounds"
+        )
         confidence_level: str = Field("Medium", description="Confidence level: High, Medium, Low")
         supporting_citations: List[EvidenceCitation] = Field(default_factory=list, description="Documented evidence citations")
         investigator_notes: str = Field(
@@ -47,6 +76,15 @@ if PYDANTIC_AVAILABLE:
             if isinstance(v, str):
                 return [v] if v else []
             return v or []
+
+        @field_validator("patch_details", mode="before")
+        @classmethod
+        def coerce_patch_details(cls, v: Any):
+            if v is None:
+                return PatchDetails()
+            if isinstance(v, dict):
+                return PatchDetails(**v)
+            return v
 
         def to_dict(self):
             return self.model_dump()
@@ -66,6 +104,16 @@ else:
             return asdict(self)
 
     @dataclass
+    class PatchDetails:
+        patch_status: str = "Unknown"
+        affected_versions: List[str] = field(default_factory=list)
+        fixed_versions: List[str] = field(default_factory=list)
+        remediation_workarounds: List[str] = field(default_factory=list)
+
+        def to_dict(self):
+            return asdict(self)
+
+    @dataclass
     class InvestigationResult:
         query_observation: str
         match_status: str
@@ -73,6 +121,7 @@ else:
         potential_threat_actors: List[str] = field(default_factory=list)
         associated_malware: List[str] = field(default_factory=list)
         associated_cves: List[str] = field(default_factory=list)
+        patch_details: PatchDetails = field(default_factory=PatchDetails)
         confidence_level: str = "Medium"
         supporting_citations: List[EvidenceCitation] = field(default_factory=list)
         investigator_notes: str = "AI-assisted assessment. Requires verification by human cybersecurity analyst."
@@ -85,6 +134,7 @@ else:
                 "potential_threat_actors": self.potential_threat_actors,
                 "associated_malware": self.associated_malware,
                 "associated_cves": self.associated_cves,
+                "patch_details": self.patch_details.to_dict() if hasattr(self.patch_details, "to_dict") else self.patch_details,
                 "confidence_level": self.confidence_level,
                 "supporting_citations": [c.to_dict() if hasattr(c, 'to_dict') else c for c in self.supporting_citations],
                 "investigator_notes": self.investigator_notes
@@ -96,6 +146,8 @@ else:
         @classmethod
         def model_validate(cls, obj):
             citations = [EvidenceCitation(**c) if isinstance(c, dict) else c for c in obj.get("supporting_citations", [])]
+            raw_patch = obj.get("patch_details", {})
+            patch = PatchDetails(**raw_patch) if isinstance(raw_patch, dict) else (raw_patch or PatchDetails())
             return cls(
                 query_observation=obj.get("query_observation", ""),
                 match_status=obj.get("match_status", "Unsupported"),
@@ -103,6 +155,7 @@ else:
                 potential_threat_actors=obj.get("potential_threat_actors", []),
                 associated_malware=obj.get("associated_malware", []),
                 associated_cves=obj.get("associated_cves", []),
+                patch_details=patch,
                 confidence_level=obj.get("confidence_level", "Medium"),
                 supporting_citations=citations,
                 investigator_notes=obj.get("investigator_notes", "AI-assisted assessment. Human review required.")

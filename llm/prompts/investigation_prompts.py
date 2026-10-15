@@ -17,8 +17,13 @@ CRITICAL GROUNDING & ANTI-HALLUCINATION RULES:
    - 'Partial': Shared malware or technique, but distinct infrastructure or unknown affiliation.
    - 'Weak': Minor incidental overlap (e.g. generic tool or protocol).
    - 'Unsupported': No credible historical evidence found connecting the observation.
-4. Always include a disclaimer that this is an AI-assisted analysis requiring human investigator review.
-5. Return strictly valid JSON conforming to the schema.
+4. For any identified CVE or vulnerability, assess patch availability with definitive clarity:
+   - Explicitly specify patch_status as 'Available' (official vendor patch exists), 'No Official Patch' (unpatched / zero-day), 'Workaround Only' (only mitigations exist), or 'Not Applicable'.
+   - List the affected_versions (products and vulnerable version ranges).
+   - List the fixed_versions (official security updates, patch versions, or vendor KB bulletins like MS17-010).
+   - List any remediation_workarounds (mitigations or workarounds from CISA KEV or vendor advisories).
+5. Always include a disclaimer that this is an AI-assisted analysis requiring human investigator review.
+6. Return strictly valid JSON conforming to the schema.
 """
 
 
@@ -70,6 +75,7 @@ def build_investigation_prompt(
         f"TASK:\n"
         f"Synthesize the historical evidence and determine whether this threat has been documented previously. "
         f"Incorporate any identified threat actors, malware families, and MITRE relationships from the evidence. "
+        f"Evaluate patch availability for any referenced CVE or vulnerability with explicit clarity. "
         f"Provide your assessment in a JSON object with keys:\n"
         f"- query_observation: string\n"
         f"- match_status: 'Exact' | 'Strong' | 'Partial' | 'Weak' | 'Unsupported'\n"
@@ -77,6 +83,11 @@ def build_investigation_prompt(
         f"- potential_threat_actors: list of strings (include any threat actors from STIX graph/evidence)\n"
         f"- associated_malware: list of strings (include any malware/tools identified in evidence)\n"
         f"- associated_cves: list of strings\n"
+        f"- patch_details: object with keys:\n"
+        f"    * patch_status: 'Available' | 'No Official Patch' | 'Workaround Only' | 'Not Applicable'\n"
+        f"    * affected_versions: list of strings (e.g. ['Windows Server 2008', 'Windows 7', 'Windows 10'])\n"
+        f"    * fixed_versions: list of strings (official patch bulletins/versions, e.g. ['MS17-010'])\n"
+        f"    * remediation_workarounds: list of strings (mitigations/workarounds, e.g. ['Disable SMBv1'])\n"
         f"- confidence_level: 'High' | 'Medium' | 'Low'\n"
         f"- supporting_citations: list of objects {{document_id, relevance_score, key_excerpt, observed_overlap}}\n"
         f"- investigator_notes: string reminding analyst of human verification\n"
