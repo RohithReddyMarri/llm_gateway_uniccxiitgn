@@ -23,7 +23,18 @@ class OllamaLocalProvider(LLMProvider):
         config: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(model_name=model_name, config=config)
-        self.host = host.rstrip("/")
+        clean_host = (host or "http://localhost:11434").strip()
+        if not clean_host.startswith(("http://", "https://")):
+            clean_host = f"http://{clean_host}"
+        from urllib.parse import urlparse, urlunparse
+        parsed = urlparse(clean_host)
+        netloc = parsed.netloc
+        if ":" not in netloc:
+            host_part = "localhost" if netloc in ("0.0.0.0", "") else netloc
+            netloc = f"{host_part}:11434"
+        elif netloc.startswith("0.0.0.0:"):
+            netloc = "localhost:" + netloc.split(":")[1]
+        self.host = urlunparse((parsed.scheme or "http", netloc, "", "", "", "")).rstrip("/")
 
     def generate(
         self,

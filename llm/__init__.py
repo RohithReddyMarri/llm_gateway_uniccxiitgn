@@ -52,6 +52,7 @@ def investigate_threat(
     observation: str,
     retrieved_evidence: Any = None,
     team2_api_url: Optional[str] = None,
+    allowed_sources: Optional[List[str]] = None,
     backend: Optional[str] = None,
     model_name: Optional[str] = None,
     **kwargs
@@ -63,7 +64,12 @@ def investigate_threat(
     """
     provider = get_llm_provider(backend=backend, model_name=model_name, **kwargs)
     investigator = ThreatInvestigator(provider)
-    result = investigator.investigate(observation, retrieved_evidence, team2_api_url=team2_api_url)
+    result = investigator.investigate(
+        observation,
+        retrieved_evidence,
+        team2_api_url=team2_api_url,
+        allowed_sources=allowed_sources,
+    )
     return result.to_dict() if hasattr(result, "to_dict") else result
 
 
