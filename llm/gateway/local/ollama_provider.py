@@ -42,6 +42,8 @@ class OllamaLocalProvider(LLMProvider):
         system_prompt: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 2000,
+        format: Optional[str] = None,
+        **kwargs,
     ) -> str:
         url = f"{self.host}/api/generate"
         payload = {
@@ -49,12 +51,13 @@ class OllamaLocalProvider(LLMProvider):
             "prompt": prompt,
             "system": system_prompt or "You are a cybersecurity intelligence analyst.",
             "stream": False,
-            "format": "json",
             "options": {
                 "temperature": temperature,
                 "num_predict": max_tokens,
             }
         }
+        if format:
+            payload["format"] = format
 
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(

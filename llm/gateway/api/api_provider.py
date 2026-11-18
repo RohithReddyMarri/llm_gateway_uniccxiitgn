@@ -37,6 +37,7 @@ class APILLMProvider(LLMProvider):
         system_prompt: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 2000,
+        **kwargs,
     ) -> str:
         if not self.api_key:
             raise ValueError(

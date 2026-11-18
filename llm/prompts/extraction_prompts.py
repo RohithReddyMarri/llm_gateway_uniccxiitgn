@@ -15,7 +15,8 @@ STRICT EXTRACTION RULES:
    - 'url' for complete web addresses
    - 'sha256' or 'md5' for cryptographic file hashes
 4. Separate threat actors, malware names, and affected products into clean list entries.
-5. Return strictly valid JSON conforming to the requested schema.
+5. If NO CVEs or vulnerabilities are present, leave vulnerabilities as an empty list []. NEVER output "N/A" or "None" as a cve_id.
+6. Return strictly valid JSON conforming to the requested schema.
 """
 
 

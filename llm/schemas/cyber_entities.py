@@ -43,6 +43,24 @@ if PYDANTIC_AVAILABLE:
         affected_products: List[str] = Field(default_factory=list, description="Targeted or vulnerable software/products")
         mitigations: List[str] = Field(default_factory=list, description="Recommended technical controls or patches")
 
+        @field_validator("vulnerabilities", mode="before")
+        @classmethod
+        def sanitize_vulnerabilities(cls, v: Any):
+            """Gracefully filters out placeholder entries like cve_id='N/A' or 'None' when no CVE is present."""
+            if not isinstance(v, list):
+                return []
+            valid = []
+            for item in v:
+                if isinstance(item, dict):
+                    cid = str(item.get("cve_id", "")).strip().upper()
+                    if re.match(r"^CVE-\d{4}-\d{4,8}$", cid):
+                        valid.append(item)
+                elif hasattr(item, "cve_id"):
+                    cid = str(getattr(item, "cve_id", "")).strip().upper()
+                    if re.match(r"^CVE-\d{4}-\d{4,8}$", cid):
+                        valid.append(item)
+            return valid
+
         def to_dict(self):
             return self.model_dump()
 

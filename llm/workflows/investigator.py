@@ -205,13 +205,11 @@ class ThreatInvestigator:
         for citation in result.supporting_citations:
             raw_cid = (citation.document_id or "").strip().lower()
             if raw_cid in doc_id_map:
-                # Automatically resolve to the authoritative document ID
+                # Resolve recognized ordinal or base alias (e.g. 'Evidence #1') to the authoritative document ID
                 citation.document_id = doc_id_map[raw_cid]
-            elif any(raw_cid in valid_id or valid_id in raw_cid for valid_id in doc_id_map):
-                matching_real_id = next(doc_id_map[k] for k in doc_id_map if raw_cid in k or k in raw_cid)
-                citation.document_id = matching_real_id
             else:
-                if doc_id_map:
-                    citation.key_excerpt = f"[Unverified Reference] {citation.key_excerpt}"
+                # Do NOT forcibly overwrite unknown/hallucinated document IDs.
+                # Preserve the model's actual citation and flag as unverified for evaluation integrity.
+                citation.key_excerpt = f"[Unverified Citation: {citation.document_id}] {citation.key_excerpt}"
 
         return result

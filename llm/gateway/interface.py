@@ -23,6 +23,8 @@ class LLMProvider(ABC):
         system_prompt: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 2000,
+        format: Optional[str] = None,
+        **kwargs,
     ) -> str:
         """
         Generate raw text response from the underlying LLM.
@@ -50,6 +52,7 @@ class LLMProvider(ABC):
             prompt=prompt,
             system_prompt=structured_system,
             temperature=0.0,
+            format="json",
         )
 
         cleaned_json = self._extract_json(raw_response)

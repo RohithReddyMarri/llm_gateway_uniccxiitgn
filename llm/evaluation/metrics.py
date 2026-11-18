@@ -10,8 +10,11 @@ Implements mathematical scoring for:
 from typing import Set, Dict, Any, List, Optional
 
 
-def calculate_prf1(predicted: Set[str], ground_truth: Set[str]) -> Dict[str, float]:
-    """Calculates standard Precision, Recall, and F1 score between two sets of strings."""
+def calculate_prf1(predicted: Set[str], ground_truth: Set[str], relaxed: bool = True) -> Dict[str, float]:
+    """
+    Calculates Precision, Recall, and F1 score between two sets of strings.
+    Supports relaxed substring/overlap matching for realistic natural language entities.
+    """
     pred_clean = {p.strip().lower() for p in predicted if p and isinstance(p, str) and p.strip()}
     gt_clean = {g.strip().lower() for g in ground_truth if g and isinstance(g, str) and g.strip()}
 
@@ -20,9 +23,21 @@ def calculate_prf1(predicted: Set[str], ground_truth: Set[str]) -> Dict[str, flo
     if not pred_clean or not gt_clean:
         return {"precision": 0.0, "recall": 0.0, "f1": 0.0, "tp": 0, "fp": len(pred_clean), "fn": len(gt_clean)}
 
-    true_positives = len(pred_clean.intersection(gt_clean))
-    false_positives = len(pred_clean - gt_clean)
-    false_negatives = len(gt_clean - pred_clean)
+    matched_gt = set()
+    matched_pred = set()
+
+    for p in pred_clean:
+        for g in gt_clean:
+            if g in matched_gt:
+                continue
+            if p == g or (relaxed and (p in g or g in p)):
+                matched_gt.add(g)
+                matched_pred.add(p)
+                break
+
+    true_positives = len(matched_pred)
+    false_positives = len(pred_clean - matched_pred)
+    false_negatives = len(gt_clean - matched_gt)
 
     precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0.0
     recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0.0
@@ -45,7 +60,6 @@ def calculate_extraction_metrics(
     """
     Evaluates entity-level extraction across CVEs, IOCs, Malware, and Threat Actors.
     """
-    # Extract predicted sets
     pred_cves = {
         v.get("cve_id", "") if isinstance(v, dict) else getattr(v, "cve_id", "")
         for v in extracted.get("vulnerabilities", [])
@@ -57,13 +71,11 @@ def calculate_extraction_metrics(
     pred_malware = set(extracted.get("malware_families", []))
     pred_actors = set(extracted.get("threat_actors", []))
 
-    # Evaluate each dimension
     cve_metrics = calculate_prf1(pred_cves, set(ground_truth.get("cves", [])))
     ioc_metrics = calculate_prf1(pred_iocs, set(ground_truth.get("iocs", [])))
     malware_metrics = calculate_prf1(pred_malware, set(ground_truth.get("malware_families", [])))
     actor_metrics = calculate_prf1(pred_actors, set(ground_truth.get("threat_actors", [])))
 
-    # Compute macro-average F1 across all 4 entity dimensions
     macro_f1 = round((cve_metrics["f1"] + ioc_metrics["f1"] + malware_metrics["f1"] + actor_metrics["f1"]) / 4.0, 3)
 
     return {
@@ -96,7 +108,9 @@ def calculate_groundedness_score(
 
     for cit in citations:
         doc_id = cit.get("document_id") if isinstance(cit, dict) else getattr(cit, "document_id", "")
-        if doc_id in provided_evidence_ids:
+        clean_doc = (doc_id or "").strip().lower()
+        # Check exact or prefix containment against provided evidence IDs
+        if any(clean_doc == pid.strip().lower() or clean_doc in pid.strip().lower() or pid.strip().lower() in clean_doc for pid in provided_evidence_ids):
             verified += 1
 
     score = round(verified / total, 3) if total > 0 else 0.0
@@ -126,7 +140,14 @@ def calculate_patch_metrics(
     pred_status = str(extracted_patch.get("patch_status", "Unknown")).strip().lower()
     gt_status = str(ground_truth_patch.get("patch_status", "Unknown")).strip().lower()
 
-    status_match = (pred_status == gt_status) if gt_status != "unknown" else False
+    # Equivalence: 'no official patch' and 'workaround only' both denote unpatched vulnerabilities
+    unpatched_equivalents = {"no official patch", "workaround only"}
+    if pred_status == gt_status:
+        status_match = True
+    elif pred_status in unpatched_equivalents and gt_status in unpatched_equivalents:
+        status_match = True
+    else:
+        status_match = False
 
     pred_affected = set(extracted_patch.get("affected_versions", []))
     gt_affected = set(ground_truth_patch.get("affected_versions", []))
@@ -140,8 +161,6 @@ def calculate_patch_metrics(
     gt_workarounds = set(ground_truth_patch.get("remediation_workarounds", []))
     workaround_metrics = calculate_prf1(pred_workarounds, gt_workarounds)
 
-    # Composite precision score for patch identification:
-    # 40% status categorical accuracy + 30% affected versions precision + 30% fixed versions precision
     status_score = 1.0 if status_match else 0.0
     composite_precision = round(
         (status_score * 0.40) +

@@ -1,0 +1,339 @@
+{
+  "benchmark_timestamp": "2026-11-18T17:10:07.046527+00:00",
+  "backend": "local",
+  "total_cases_evaluated": 4,
+  "metrics_summary": {
+    "avg_extraction_macro_f1": 0.823,
+    "avg_evidence_groundedness": 1.0,
+    "avg_hallucination_rate": 0.0,
+    "avg_patch_precision": 0.45,
+    "avg_workflow_latency_seconds": 163.18
+  },
+  "quality_gates": {
+    "extraction_f1_gate": {
+      "target": 0.8,
+      "achieved": 0.823,
+      "status": "PASS"
+    },
+    "groundedness_gate": {
+      "target": 0.9,
+      "achieved": 1.0,
+      "status": "PASS"
+    },
+    "patch_precision_gate": {
+      "target": 0.8,
+      "achieved": 0.45,
+      "status": "FAIL"
+    }
+  },
+  "cases": [
+    {
+      "case_id": "TC-CYBER-001",
+      "description": "Lazarus Group campaign targeting Exchange and Windows Server",
+      "latency_seconds": 206.93,
+      "extraction_metrics": {
+        "macro_f1": 1.0,
+        "cve": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 2,
+          "fp": 0,
+          "fn": 0
+        },
+        "ioc": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 2,
+          "fp": 0,
+          "fn": 0
+        },
+        "malware": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 2,
+          "fp": 0,
+          "fn": 0
+        },
+        "threat_actor": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0
+        }
+      },
+      "grounding_metrics": {
+        "groundedness_score": 1.0,
+        "total_citations": 2,
+        "verified_citations": 2,
+        "hallucinated_citations": 0
+      },
+      "patch_metrics": {
+        "status_match": true,
+        "predicted_status": "Available",
+        "ground_truth_status": "Available",
+        "composite_precision": 0.4,
+        "affected_versions": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 4,
+          "fn": 2
+        },
+        "fixed_versions": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 2,
+          "fn": 2
+        },
+        "remediation_workarounds": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 2,
+          "fn": 2
+        }
+      },
+      "investigation_match_status": "Strong"
+    },
+    {
+      "case_id": "TC-CYBER-002",
+      "description": "LockBit 3.0 Ransomware campaign exploiting Citrix Bleed",
+      "latency_seconds": 160.78,
+      "extraction_metrics": {
+        "macro_f1": 0.625,
+        "cve": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0
+        },
+        "ioc": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0
+        },
+        "malware": {
+          "precision": 0.5,
+          "recall": 0.5,
+          "f1": 0.5,
+          "tp": 1,
+          "fp": 1,
+          "fn": 1
+        },
+        "threat_actor": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 1,
+          "fn": 1
+        }
+      },
+      "grounding_metrics": {
+        "groundedness_score": 1.0,
+        "total_citations": 2,
+        "verified_citations": 2,
+        "hallucinated_citations": 0
+      },
+      "patch_metrics": {
+        "status_match": true,
+        "predicted_status": "Available",
+        "ground_truth_status": "Available",
+        "composite_precision": 0.4,
+        "affected_versions": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 1,
+          "fn": 2
+        },
+        "fixed_versions": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 1,
+          "fn": 2
+        },
+        "remediation_workarounds": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 1,
+          "fn": 2
+        }
+      },
+      "investigation_match_status": "Strong"
+    },
+    {
+      "case_id": "TC-CYBER-003",
+      "description": "Apache Log4j2 JNDI RCE Campaign & Abuse.ch Feed Telemetry",
+      "latency_seconds": 156.43,
+      "extraction_metrics": {
+        "macro_f1": 0.917,
+        "cve": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0
+        },
+        "ioc": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 2,
+          "fp": 0,
+          "fn": 0
+        },
+        "malware": {
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.667,
+          "tp": 1,
+          "fp": 0,
+          "fn": 1
+        },
+        "threat_actor": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0
+        }
+      },
+      "grounding_metrics": {
+        "groundedness_score": 1.0,
+        "total_citations": 2,
+        "verified_citations": 2,
+        "hallucinated_citations": 0
+      },
+      "patch_metrics": {
+        "status_match": true,
+        "predicted_status": "Available",
+        "ground_truth_status": "Available",
+        "composite_precision": 0.7,
+        "affected_versions": {
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.667,
+          "tp": 1,
+          "fp": 0,
+          "fn": 1
+        },
+        "fixed_versions": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 1,
+          "fn": 2
+        },
+        "remediation_workarounds": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 2,
+          "fn": 2
+        }
+      },
+      "investigation_match_status": "Exact"
+    },
+    {
+      "case_id": "TC-CYBER-004",
+      "description": "Zero-Day remote exploit in logging daemon without vendor patch",
+      "latency_seconds": 128.56,
+      "extraction_metrics": {
+        "macro_f1": 0.75,
+        "cve": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0
+        },
+        "ioc": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 1,
+          "fn": 1
+        },
+        "malware": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0
+        },
+        "threat_actor": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0
+        }
+      },
+      "grounding_metrics": {
+        "groundedness_score": 1.0,
+        "total_citations": 1,
+        "verified_citations": 1,
+        "hallucinated_citations": 0
+      },
+      "patch_metrics": {
+        "status_match": false,
+        "predicted_status": "No Official Patch",
+        "ground_truth_status": "Workaround Only",
+        "composite_precision": 0.3,
+        "affected_versions": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 2
+        },
+        "fixed_versions": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0
+        },
+        "remediation_workarounds": {
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.667,
+          "tp": 1,
+          "fp": 0,
+          "fn": 1
+        }
+      },
+      "investigation_match_status": "Exact"
+    }
+  ]
+}
