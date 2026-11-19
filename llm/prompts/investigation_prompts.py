@@ -91,6 +91,10 @@ def build_investigation_prompt(
         f"    * fixed_versions: list of strings (official patch bulletins or fixed versions explicitly stated in the evidence; leave empty if none stated, do NOT invent or copy examples)\n"
         f"    * remediation_workarounds: list of strings (mitigations or workarounds explicitly stated in the evidence; leave empty if none stated)\n"
         f"- confidence_level: 'High' | 'Medium' | 'Low'\n"
-        f"- supporting_citations: list of objects {{document_id, relevance_score, key_excerpt, observed_overlap}}\n"
+        f"- supporting_citations: list of objects with keys:\n"
+        f"    * document_id: string (the Document ID of the cited chunk, e.g. 'CVE-2024-21410_KEV')\n"
+        f"    * relevance_score: number between 0.0 and 1.0 (retrieval relevance score)\n"
+        f"    * key_excerpt: string (verbatim excerpt from document content proving the match)\n"
+        f"    * observed_overlap: list of strings (specific matched indicators, e.g. ['CVE-2017-0144'])\n"
         f"- investigator_notes: string reminding analyst of human verification\n"
     )

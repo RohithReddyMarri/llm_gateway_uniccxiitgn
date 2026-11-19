@@ -21,6 +21,22 @@ if PYDANTIC_AVAILABLE:
         relevance_score: Optional[float] = Field(None, description="Similarity score or retrieval confidence")
         observed_overlap: List[str] = Field(default_factory=list, description="Specific matched observables (IPs, hashes, CVEs)")
 
+        @field_validator("observed_overlap", mode="before")
+        @classmethod
+        def coerce_observed_overlap(cls, v: Any):
+            if v is None:
+                return []
+            if isinstance(v, str):
+                v_clean = v.strip()
+                if not v_clean:
+                    return []
+                if "," in v_clean:
+                    return [item.strip() for item in v_clean.split(",") if item.strip()]
+                return [v_clean]
+            if isinstance(v, (list, tuple, set)):
+                return [str(x).strip() for x in v if str(x).strip()]
+            return [str(v)]
+
         def to_dict(self):
             return self.model_dump()
 
@@ -158,11 +174,19 @@ else:
         @classmethod
         def model_validate(cls, obj):
             citation_keys = {"document_id", "key_excerpt", "relevance_score", "observed_overlap"}
-            citations = [
-                EvidenceCitation(**{k: v for k, v in c.items() if k in citation_keys})
-                if isinstance(c, dict) else c
-                for c in obj.get("supporting_citations", [])
-            ]
+            citations = []
+            for c in obj.get("supporting_citations", []):
+                if isinstance(c, dict):
+                    filt = {k: v for k, v in c.items() if k in citation_keys}
+                    if "observed_overlap" in filt:
+                        oo = filt["observed_overlap"]
+                        if isinstance(oo, str):
+                            filt["observed_overlap"] = [oo] if oo.strip() else []
+                        elif not isinstance(oo, list):
+                            filt["observed_overlap"] = list(oo) if oo else []
+                    citations.append(EvidenceCitation(**filt))
+                else:
+                    citations.append(c)
             raw_patch = obj.get("patch_details", {})
             patch_keys = {"patch_status", "affected_versions", "fixed_versions", "remediation_workarounds"}
             patch = (

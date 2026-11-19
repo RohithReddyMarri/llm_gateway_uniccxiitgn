@@ -54,11 +54,13 @@ class LLMProvider(ABC):
         schema_cls: Type[Any],
         system_prompt: Optional[str] = None,
         max_retries: int = 2,
+        _original_prompt: Optional[str] = None,
     ) -> Any:
         """
         Generates response and validates it against the provided schema class.
-        Includes built-in json sanitization, compact retry prompt, and schema fallback parsing.
+        Includes built-in json sanitization, auto-unwrapping, and non-destructive retries.
         """
+        base_prompt = _original_prompt or prompt
         structured_system = (
             f"{system_prompt or ''}\n\n"
             "CRITICAL INSTRUCTION: You MUST return strictly valid JSON matching the required schema. "
@@ -87,17 +89,18 @@ class LLMProvider(ABC):
             return schema_cls(**data)
         except Exception as e:
             if max_retries > 0:
-                # Preserve the full prompt so critical evidence chunks are never lost on retry
+                # Preserve the clean original prompt so critical evidence chunks are never lost or double-nested on retry
                 retry_prompt = (
                     f"CRITICAL: Your previous JSON output was invalid.\n"
                     f"Error details: {str(e)}\n"
-                    f"Return ONLY valid JSON matching the {schema_cls.__name__} schema directly at root (do NOT wrap in extra keys like 'threat_summary'):\n{prompt}"
+                    f"Return ONLY valid JSON matching the {schema_cls.__name__} schema directly at root (do NOT wrap in extra keys like 'threat_summary'):\n{base_prompt}"
                 )
                 return self.generate_structured(
                     prompt=retry_prompt,
                     schema_cls=schema_cls,
                     system_prompt=system_prompt,
                     max_retries=max_retries - 1,
+                    _original_prompt=base_prompt,
                 )
             raise LLMValidationError(f"Failed to parse and validate structured output: {e}\nRaw output: {raw_response}")
 
