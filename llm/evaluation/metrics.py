@@ -1,9 +1,9 @@
 """
-Evaluation Metrics Engine for Team 3 (LLM Intelligence & Evaluation).
+Evaluation Metrics Engine for LLM Intelligence & Evaluation.
 Implements mathematical scoring for:
 1. Entity Extraction (Precision, Recall, F1, Macro F1 across CVE, IOC, Malware, Actor)
 2. Evidence Groundedness (Citation verification, Hallucination detection)
-3. Patch & Remediation Extraction (Task 3.0: Status, Affected/Fixed Versions, Workarounds)
+3. Patch & Remediation Extraction (Status, Affected/Fixed Versions, Workarounds)
 4. Workflow Latency SLA
 """
 
@@ -127,7 +127,7 @@ def calculate_patch_metrics(
     ground_truth_patch: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    Evaluates Task 3.0 (Patch Identification) against UNICC Evaluation Criteria:
+    Evaluates Patch Identification & Remediation Precision:
     - Measures categorical clarity (patch_status: 'Available' | 'No Official Patch' | 'Workaround Only' | 'Not Applicable')
     - Measures precision in affected versions, fixed versions, and remediation workarounds.
     Target SLA: >= 80% precision.

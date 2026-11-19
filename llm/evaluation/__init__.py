@@ -1,5 +1,5 @@
 """
-Team 3 (LLM Intelligence & Evaluation) Benchmark Package.
+LLM Intelligence & Evaluation Benchmark Package.
 Provides automated evaluation metrics, calibrated ground truth scenarios,
 and execution runners for the LLM subsystem.
 """
@@ -11,7 +11,7 @@ from llm.evaluation.metrics import (
     calculate_patch_metrics,
 )
 from llm.evaluation.benchmark_data import BENCHMARK_CASES
-from llm.evaluation.evaluate_team3 import run_benchmark
+from llm.evaluation.evaluate_llm import run_benchmark
 
 __all__ = [
     "calculate_prf1",

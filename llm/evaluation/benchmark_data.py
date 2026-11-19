@@ -1,5 +1,5 @@
 """
-Curated Ground-Truth Benchmark Dataset for Team 3 LLM Intelligence & Evaluation.
+Curated Ground-Truth Benchmark Dataset for LLM Intelligence & Evaluation.
 Grounded directly in authentic knowledge-base records (CISA KEV, NVD, EPSS, Abuse.ch)
 from the UNICC x IITGN Capstone corpus.
 

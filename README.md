@@ -108,7 +108,7 @@ python integrate_with_team2_api.py
 Run our benchmark suite to calculate Precision, Recall, F1, and Grounding scores:
 
 ```bash
-python evaluation/evaluate_team3.py
+python evaluation/evaluate_llm.py
 ```
 
 ---
@@ -176,7 +176,7 @@ unicc-cyber-ai/
 ├── evaluation/                      # Evaluation Benchmark & Metrics
 │   ├── benchmark_data.py            # Real threat test cases (Lazarus, LockBit, ThreatFox)
 │   ├── metrics.py                   # Precision, Recall, F1 & Groundedness math
-│   └── evaluate_team3.py            # Automated scorecard runner
+│   └── evaluate_llm.py              # Automated scorecard runner
 └── tests/
     └── test_workflows.py            # Automated unit tests
 ```
