@@ -1,4 +1,4 @@
-"""Core LLM Intelligence Workflows for Team 3."""
+"""Core LLM Intelligence Workflows."""
 from .summarizer import ReportSummarizer
 from .extractor import CyberEntityExtractor
 from .investigator import ThreatInvestigator

@@ -5,6 +5,7 @@ Synthesizes retrieved historical records into a calibrated threat triage report.
 
 from typing import Any, Dict, List, Optional, Union
 import json
+import re
 import urllib.request
 import urllib.error
 from ..gateway.interface import LLMProvider
@@ -190,6 +191,35 @@ class ThreatInvestigator:
         else:
             clean_evidence = normalize_team2_evidence(retrieved_evidence)
 
+        # Honest fallback: if zero evidence was returned by the knowledge base,
+        # return an honest Unsupported triage verdict instead of letting the LLM hallucinate.
+        if not clean_evidence:
+            fallback_data = {
+                "query_observation": observation.strip(),
+                "match_status": "Unsupported",
+                "assessment_narrative": (
+                    "No matching historical threat intelligence records were found in the knowledge base "
+                    "for the observed indicators or activity. No correlation with known campaigns or threat actors."
+                ),
+                "potential_threat_actors": [],
+                "associated_malware": [],
+                "associated_cves": [],
+                "mitre_tactics": [],
+                "associated_mitre_tactics": [],
+                "patch_details": {
+                    "patch_status": "Not Applicable",
+                    "affected_versions": [],
+                    "fixed_versions": [],
+                    "remediation_workarounds": ["No active historical threat match requiring patch remediation."]
+                },
+                "confidence_level": "Low",
+                "supporting_citations": [],
+                "investigator_notes": "Human analyst review recommended. Zero verified corpus matches identified."
+            }
+            if hasattr(InvestigationResult, "model_validate"):
+                return InvestigationResult.model_validate(fallback_data)
+            return InvestigationResult(**fallback_data)
+
         prompt = build_investigation_prompt(observation, clean_evidence)
 
         result: InvestigationResult = self.provider.generate_structured(
@@ -207,9 +237,19 @@ class ThreatInvestigator:
                 doc_id_map[real_id.lower()] = real_id
                 doc_id_map[f"evidence #{idx}".lower()] = real_id
                 doc_id_map[f"evidence {idx}".lower()] = real_id
+                doc_id_map[f"evidence-{idx}".lower()] = real_id
                 doc_id_map[f"doc-{idx}".lower()] = real_id
                 doc_id_map[f"doc #{idx}".lower()] = real_id
                 doc_id_map[f"doc {idx}".lower()] = real_id
+                # Zero-padded support: DOC-01, DOC-001, doc01, doc001
+                doc_id_map[f"doc-{idx:02d}".lower()] = real_id
+                doc_id_map[f"doc-{idx:03d}".lower()] = real_id
+                doc_id_map[f"doc{idx}".lower()] = real_id
+                doc_id_map[f"doc{idx:02d}".lower()] = real_id
+                doc_id_map[f"doc{idx:03d}".lower()] = real_id
+                doc_id_map[f"evidence-{idx:02d}".lower()] = real_id
+                doc_id_map[f"evidence-{idx:03d}".lower()] = real_id
+                doc_id_map[str(idx)] = real_id
                 # Only set base_cve if not already mapped to avoid collision overwrites
                 base_cve = real_id.split("_")[0].lower()
                 if base_cve.startswith("cve-") and base_cve not in doc_id_map:
@@ -217,8 +257,11 @@ class ThreatInvestigator:
 
         for citation in result.supporting_citations:
             raw_cid = (citation.document_id or "").strip().lower()
+            clean_cid = re.sub(r"^(source|citation|ref)[:\s#]+", "", raw_cid).strip()
             if raw_cid in doc_id_map:
                 citation.document_id = doc_id_map[raw_cid]
+            elif clean_cid in doc_id_map:
+                citation.document_id = doc_id_map[clean_cid]
             else:
                 citation.key_excerpt = f"[Unverified Citation: {citation.document_id}] {citation.key_excerpt}"
 

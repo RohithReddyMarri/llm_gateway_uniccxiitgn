@@ -19,9 +19,9 @@ CRITICAL GROUNDING & ANTI-HALLUCINATION RULES:
    - 'Unsupported': No credible historical evidence found connecting the observation.
 4. For any identified CVE or vulnerability, assess patch availability with definitive clarity:
    - Explicitly specify patch_status as 'Available' (official vendor patch exists), 'No Official Patch' (unpatched / zero-day), 'Workaround Only' (only mitigations exist), or 'Not Applicable'.
-   - List the affected_versions (products and vulnerable version ranges).
-   - List the fixed_versions (official security updates, patch versions, or vendor KB bulletins like MS17-010).
-   - List any remediation_workarounds (mitigations or workarounds from CISA KEV or vendor advisories).
+   - List the affected_versions (products and vulnerable version ranges explicitly stated in evidence).
+   - List the fixed_versions (official security updates, patch versions, or vendor advisories explicitly stated in evidence).
+   - List any remediation_workarounds (mitigations or workarounds from CISA KEV or vendor advisories). Never copy unrelated examples.
 5. Always include a disclaimer that this is an AI-assisted analysis requiring human investigator review.
 6. Return strictly valid JSON conforming to the schema.
 """
@@ -70,7 +70,7 @@ def build_investigation_prompt(
     return (
         f"NEWLY OBSERVED THREAT / QUERY:\n"
         f"{observation.strip()}\n\n"
-        f"RETRIEVED HISTORICAL EVIDENCE FROM KNOWLEDGE BASE (Team 2 Retrieval & STIX Graph):\n"
+        f"RETRIEVED HISTORICAL EVIDENCE FROM KNOWLEDGE BASE (Retrieval & STIX Graph):\n"
         f"{evidence_text}\n"
         f"TASK:\n"
         f"Synthesize the historical evidence and determine whether this threat has been documented previously. "
@@ -83,11 +83,12 @@ def build_investigation_prompt(
         f"- potential_threat_actors: list of strings (include any threat actors from STIX graph/evidence)\n"
         f"- associated_malware: list of strings (include any malware/tools identified in evidence)\n"
         f"- associated_cves: list of strings\n"
+        f"- mitre_tactics: list of strings (e.g. ['Initial Access', 'Lateral Movement'])\n"
         f"- patch_details: object with keys:\n"
         f"    * patch_status: 'Available' | 'No Official Patch' | 'Workaround Only' | 'Not Applicable'\n"
-        f"    * affected_versions: list of strings (e.g. ['Windows Server 2008', 'Windows 7', 'Windows 10'])\n"
-        f"    * fixed_versions: list of strings (official patch bulletins/versions, e.g. ['MS17-010'])\n"
-        f"    * remediation_workarounds: list of strings (mitigations/workarounds, e.g. ['Disable SMBv1'])\n"
+        f"    * affected_versions: list of strings (products/versions explicitly stated in the evidence for this threat)\n"
+        f"    * fixed_versions: list of strings (official patch bulletins or fixed versions explicitly stated in the evidence; leave empty if none stated, do NOT invent or copy examples)\n"
+        f"    * remediation_workarounds: list of strings (mitigations or workarounds explicitly stated in the evidence; leave empty if none stated)\n"
         f"- confidence_level: 'High' | 'Medium' | 'Low'\n"
         f"- supporting_citations: list of objects {{document_id, relevance_score, key_excerpt, observed_overlap}}\n"
         f"- investigator_notes: string reminding analyst of human verification\n"

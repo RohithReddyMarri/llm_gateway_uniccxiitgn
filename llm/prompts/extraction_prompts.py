@@ -22,10 +22,11 @@ STRICT EXTRACTION RULES:
 
 def build_extraction_prompt(text: str) -> str:
     """Builds the extraction prompt for raw reports or event logs."""
+    clean = (text or "").strip().replace("=== END TEXT ===", "=== [ESCAPED] ===")
     return (
         "Extract all cybersecurity entities from the text below.\n\n"
         "=== BEGIN TEXT ===\n"
-        f"{text.strip()}\n"
+        f"{clean}\n"
         "=== END TEXT ===\n\n"
         "Return a JSON object with keys:\n"
         "- threat_actors: list of strings\n"

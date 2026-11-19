@@ -21,10 +21,11 @@ GUIDELINES:
 
 def build_summarization_prompt(report_text: str, focus_areas: str = None) -> str:
     """Builds the user prompt for report summarization."""
+    clean = (report_text or "").strip().replace("=== END REPORT TEXT ===", "=== [ESCAPED] ===")
     prompt = (
         "Please analyze and summarize the following cybersecurity report.\n\n"
         "=== BEGIN REPORT TEXT ===\n"
-        f"{report_text.strip()}\n"
+        f"{clean}\n"
         "=== END REPORT TEXT ===\n\n"
     )
     if focus_areas:

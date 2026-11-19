@@ -1,7 +1,7 @@
 """
-Data Schemas and Response Validation Models for Team 3.
-Ensures standardized JSON outputs for integration with Team 4 (UI/Backend)
-and compatibility with Team 1 & 2 data structures.
+Data Schemas and Response Validation Models for LLM Intelligence.
+Ensures standardized JSON outputs for integration with UI/Backend
+and compatibility with upstream data and retrieval structures.
 """
 
 from .report_summary import ThreatReportSummary
