@@ -24,6 +24,7 @@ CRITICAL GROUNDING & ANTI-HALLUCINATION RULES:
    - List any remediation_workarounds (mitigations or workarounds from CISA KEV or vendor advisories). Never copy unrelated examples.
 5. Always include a disclaimer that this is an AI-assisted analysis requiring human investigator review.
 6. Return strictly valid JSON conforming to the schema.
+7. Return the JSON object directly at the root level. Do NOT wrap your output in an outer container key like 'threat_summary' or 'response'.
 """
 
 
@@ -76,7 +77,7 @@ def build_investigation_prompt(
         f"Synthesize the historical evidence and determine whether this threat has been documented previously. "
         f"Incorporate any identified threat actors, malware families, and MITRE relationships from the evidence. "
         f"Evaluate patch availability for any referenced CVE or vulnerability with explicit clarity. "
-        f"Provide your assessment in a JSON object with keys:\n"
+        f"Provide your assessment in a JSON object directly at the root level (do NOT wrap in 'threat_summary') with keys:\n"
         f"- query_observation: string\n"
         f"- match_status: 'Exact' | 'Strong' | 'Partial' | 'Weak' | 'Unsupported'\n"
         f"- assessment_narrative: detailed grounded synthesis\n"

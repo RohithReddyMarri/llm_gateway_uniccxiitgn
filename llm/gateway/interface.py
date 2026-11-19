@@ -77,16 +77,21 @@ class LLMProvider(ABC):
 
         try:
             data = json.loads(cleaned_json)
+            # Auto-unwrap if model wrapped output in an extra container key (e.g. "threat_summary", "data", "result")
+            if isinstance(data, dict) and len(data) == 1:
+                single_key = next(iter(data))
+                if isinstance(data[single_key], dict) and not hasattr(schema_cls, single_key):
+                    data = data[single_key]
             if hasattr(schema_cls, "model_validate"):
                 return schema_cls.model_validate(data)
             return schema_cls(**data)
         except Exception as e:
             if max_retries > 0:
-                compact_prompt = prompt if len(prompt) < 2000 else f"{prompt[:1000]}...\n[Context truncated for retry]\n...{prompt[-1000:]}"
+                # Preserve the full prompt so critical evidence chunks are never lost on retry
                 retry_prompt = (
                     f"CRITICAL: Your previous JSON output was invalid.\n"
                     f"Error details: {str(e)}\n"
-                    f"Return ONLY valid JSON matching the {schema_cls.__name__} schema for the task:\n{compact_prompt}"
+                    f"Return ONLY valid JSON matching the {schema_cls.__name__} schema directly at root (do NOT wrap in extra keys like 'threat_summary'):\n{prompt}"
                 )
                 return self.generate_structured(
                     prompt=retry_prompt,

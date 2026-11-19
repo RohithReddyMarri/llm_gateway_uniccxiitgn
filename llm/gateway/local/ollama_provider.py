@@ -46,6 +46,12 @@ class OllamaLocalProvider(LLMProvider):
         **kwargs,
     ) -> str:
         url = f"{self.host}/api/generate"
+        num_ctx = int(
+            self.config.get("num_ctx")
+            or os.environ.get("OLLAMA_NUM_CTX")
+            or os.environ.get("OLLAMA_CONTEXT_LENGTH")
+            or 16384
+        )
         payload = {
             "model": self.model_name,
             "prompt": prompt,
@@ -53,6 +59,7 @@ class OllamaLocalProvider(LLMProvider):
             "options": {
                 "temperature": temperature,
                 "num_predict": max_tokens,
+                "num_ctx": num_ctx,
             }
         }
 
