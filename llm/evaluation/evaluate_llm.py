@@ -102,7 +102,7 @@ def run_benchmark(backend: str = "local", output_file: str = None) -> dict:
         summary_dict = summary_result.to_dict() if hasattr(summary_result, "to_dict") else summary_result
         exec_summary = summary_dict.get("executive_summary", "")
         raw_len = len(case["raw_text"])
-        comp_ratio = round(1.0 - (len(exec_summary) / max(1, raw_len)), 3)
+        comp_ratio = max(0.0, round(1.0 - (len(exec_summary) / max(1, raw_len)), 3))
         compression_ratios.append(comp_ratio)
 
         # 2. Structured Extraction Workflow
@@ -146,7 +146,7 @@ def run_benchmark(backend: str = "local", output_file: str = None) -> dict:
               f"(CVE: {ext_metrics['cve']['f1']*100:.0f}%, "
               f"IOC: {ext_metrics['ioc']['f1']*100:.0f}%, "
               f"Malware: {ext_metrics['malware']['f1']*100:.0f}%, "
-              f"Actor: {ext_metrics['threat_actor']['f1']*100:.0f}%)")
+              f"Actor: {ext_metrics.get('actor', {}).get('f1', 0.0)*100:.0f}%)")
         print(f"       -> 5-Tier Match Status  : '{pred_tier}' (Expected: '{expected_tier}' | Match: {tier_match})")
         print(f"       -> Evidence Groundedness: {grounding['groundedness_score'] * 100:.1f}% "
               f"({grounding['verified_citations']}/{grounding['total_citations']} citations verified)")
@@ -229,7 +229,7 @@ def run_benchmark(backend: str = "local", output_file: str = None) -> dict:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="LLM Evaluation Benchmark Suite")
-    parser.add_argument("--backend", default="local", choices=["local", "api"], help="Target LLM backend (local: Ollama on-premise, api: cloud provider)")
+    parser.add_argument("--backend", default="local", choices=["local", "api", "mock"], help="Target LLM backend (local: Ollama on-premise, api: cloud provider, mock: offline test)")
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT), help="Path to write structured JSON evaluation results")
     args = parser.parse_args()
 

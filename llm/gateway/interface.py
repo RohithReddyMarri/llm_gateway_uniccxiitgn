@@ -1,6 +1,6 @@
 """
-Abstract Base Class defining the standard interface for all LLM providers.
-Enables seamless switching between on-premise local models and external APIs.
+Abstract Base Class and Contract for all LLM Gateway Providers.
+Ensures zero-downtime, model-agnostic switching between Local and API providers.
 """
 
 from abc import ABC, abstractmethod
@@ -9,8 +9,26 @@ import json
 import re
 
 
+class LLMGatewayError(Exception):
+    """Base exception for all LLM gateway communication, authentication, or validation failures."""
+    pass
+
+
+class LLMTimeoutError(LLMGatewayError):
+    """Raised when an inference call exceeds configured latency SLA timeouts."""
+    pass
+
+
+class LLMValidationError(LLMGatewayError):
+    """Raised when LLM output fails schema validation after retries."""
+    pass
+
+
 class LLMProvider(ABC):
-    """Abstract interface that all model adapters (local or API) must implement."""
+    """
+    Abstract interface for cybersecurity AI providers.
+    All local (Ollama) and cloud (OpenAI, Gemini) adapters must implement this contract.
+    """
 
     def __init__(self, model_name: str, config: Optional[Dict[str, Any]] = None):
         self.model_name = model_name
@@ -23,11 +41,10 @@ class LLMProvider(ABC):
         system_prompt: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 2000,
-        format: Optional[str] = None,
         **kwargs,
     ) -> str:
         """
-        Generate raw text response from the underlying LLM.
+        Generates text output for a given prompt and optional system context.
         """
         pass
 
@@ -40,7 +57,7 @@ class LLMProvider(ABC):
     ) -> Any:
         """
         Generates response and validates it against the provided schema class.
-        Includes built-in json sanitization and fallback parsing.
+        Includes built-in json sanitization, compact retry prompt, and schema fallback parsing.
         """
         structured_system = (
             f"{system_prompt or ''}\n\n"
@@ -53,6 +70,7 @@ class LLMProvider(ABC):
             system_prompt=structured_system,
             temperature=0.0,
             format="json",
+            schema_cls=schema_cls,
         )
 
         cleaned_json = self._extract_json(raw_response)
@@ -64,10 +82,11 @@ class LLMProvider(ABC):
             return schema_cls(**data)
         except Exception as e:
             if max_retries > 0:
+                compact_prompt = prompt if len(prompt) < 2000 else f"{prompt[:1000]}...\n[Context truncated for retry]\n...{prompt[-1000:]}"
                 retry_prompt = (
-                    f"Previous response was not valid JSON:\n{raw_response}\n\n"
-                    f"Error: {str(e)}\n\n"
-                    f"Please re-generate the JSON object correctly for:\n{prompt}"
+                    f"CRITICAL: Your previous JSON output was invalid.\n"
+                    f"Error details: {str(e)}\n"
+                    f"Return ONLY valid JSON matching the {schema_cls.__name__} schema for the task:\n{compact_prompt}"
                 )
                 return self.generate_structured(
                     prompt=retry_prompt,
@@ -75,7 +94,7 @@ class LLMProvider(ABC):
                     system_prompt=system_prompt,
                     max_retries=max_retries - 1,
                 )
-            raise ValueError(f"Failed to parse and validate structured output: {e}\nRaw output: {raw_response}")
+            raise LLMValidationError(f"Failed to parse and validate structured output: {e}\nRaw output: {raw_response}")
 
     @staticmethod
     def _extract_json(text: str) -> str:

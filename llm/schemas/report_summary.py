@@ -3,11 +3,11 @@ Schema for Workflow 1: Report Summarization.
 Represents an executive and technical summary of a cybersecurity report.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Any, Union
 import json
 
 try:
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel, Field, field_validator
     PYDANTIC_AVAILABLE = True
 except ImportError:
     PYDANTIC_AVAILABLE = False
@@ -22,6 +22,15 @@ if PYDANTIC_AVAILABLE:
         key_tactics: List[str] = Field(default_factory=list, description="Primary attack tactics (e.g., Phishing, Credential Theft)")
         recommended_mitigations: List[str] = Field(default_factory=list, description="Actionable technical and operational mitigations")
         confidence_rating: str = Field("High", description="Confidence rating: High, Medium, Low")
+
+        @field_validator("affected_products", "key_tactics", "recommended_mitigations", mode="before")
+        @classmethod
+        def coerce_strings_to_list(cls, v: Any):
+            if isinstance(v, str):
+                if "," in v:
+                    return [item.strip() for item in v.split(",") if item.strip()]
+                return [v.strip()] if v.strip() else []
+            return v or []
 
         def to_dict(self):
             return self.model_dump()
@@ -48,4 +57,17 @@ else:
 
         @classmethod
         def model_validate(cls, obj):
-            return cls(**obj)
+            def _to_list(val):
+                if isinstance(val, str):
+                    return [x.strip() for x in val.split(",") if x.strip()]
+                return val or []
+
+            return cls(
+                title=obj.get("title", ""),
+                executive_summary=obj.get("executive_summary", ""),
+                threat_level=obj.get("threat_level", "Medium"),
+                affected_products=_to_list(obj.get("affected_products", [])),
+                key_tactics=_to_list(obj.get("key_tactics", [])),
+                recommended_mitigations=_to_list(obj.get("recommended_mitigations", [])),
+                confidence_rating=obj.get("confidence_rating", "High"),
+            )

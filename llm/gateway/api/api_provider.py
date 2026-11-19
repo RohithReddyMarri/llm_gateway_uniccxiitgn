@@ -8,7 +8,7 @@ import os
 import json
 import urllib.request
 import urllib.error
-from ..interface import LLMProvider
+from ..interface import LLMProvider, LLMGatewayError, LLMTimeoutError
 
 
 class APILLMProvider(LLMProvider):
@@ -40,7 +40,7 @@ class APILLMProvider(LLMProvider):
         **kwargs,
     ) -> str:
         if not self.api_key:
-            raise ValueError(
+            raise LLMGatewayError(
                 "API key not found. Please set LLM_API_KEY or OPENAI_API_KEY in environment, "
                 "or pass api_key to APILLMProvider."
             )
@@ -58,6 +58,9 @@ class APILLMProvider(LLMProvider):
             "max_tokens": max_tokens,
         }
 
+        if kwargs.get("format") == "json":
+            payload["response_format"] = {"type": "json_object"}
+
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
             url,
@@ -69,12 +72,19 @@ class APILLMProvider(LLMProvider):
             method="POST"
         )
 
+        timeout = self.config.get("timeout", 60)
         try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
                 return result["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as e:
             err_body = e.read().decode("utf-8")
-            raise RuntimeError(f"API request failed [{e.code}]: {err_body}")
+            raise LLMGatewayError(f"API request failed [{e.code}]: {err_body}")
         except urllib.error.URLError as e:
-            raise ConnectionError(f"Failed to connect to API endpoint at {self.base_url}: {e}")
+            if "timeout" in str(e.reason).lower():
+                raise LLMTimeoutError(f"API request to {self.base_url} timed out.")
+            raise LLMGatewayError(f"Failed to connect to API endpoint at {self.base_url}: {e.reason}")
+        except TimeoutError:
+            raise LLMTimeoutError(f"API request to {self.base_url} timed out.")
+        except Exception as e:
+            raise LLMGatewayError(f"API request failed: {e}")

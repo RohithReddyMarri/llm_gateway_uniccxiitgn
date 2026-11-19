@@ -1,13 +1,9 @@
 """
 Workflow 3: Evidence-Grounded Threat Investigation (RAG).
-Combines newly observed threats with retrieved historical evidence (Team 2)
-to produce a grounded, citation-backed investigation report.
-Natively ingests Team 2's MatchResponse, TopMatchSchema, or dict formats directly.
-Can also directly query Team 2's existing HTTP POST endpoint automatically.
+Synthesizes retrieved historical records into a calibrated threat triage report.
 """
 
-from typing import List, Dict, Any, Union, Optional
-import os
+from typing import Any, Dict, List, Optional, Union
 import json
 import urllib.request
 import urllib.error
@@ -16,104 +12,80 @@ from ..schemas.investigation import InvestigationResult
 from ..prompts.investigation_prompts import INVESTIGATION_SYSTEM_PROMPT, build_investigation_prompt
 
 
-def fetch_team2_evidence(
-    query: str,
-    api_url: str = "http://localhost:8000",
-    top_k: int = 5,
-    allowed_sources: Optional[List[str]] = None,
-) -> Any:
+def normalize_team2_evidence(raw_evidence: Any) -> List[Dict[str, Any]]:
     """
-    Sends an HTTP POST to Team 2's EXISTING API endpoint (/api/v1/threats/match or /match).
-    Team 2's code is not modified; we simply call their live API over HTTP.
+    Translates raw retrieval engine responses into a clean, normalized evidence schema.
+    Handles top_matches, supporting_evidence_chunks, dictionaries, and Pydantic models.
+    Preserves all supporting document citations instead of arbitrarily truncating to citations[0].
     """
-    base = api_url.rstrip("/")
-    # Gracefully trim endpoint suffix if caller included it
-    for suffix in ["/api/v1/threats/match", "/match", "/query"]:
-        if base.endswith(suffix):
-            base = base[:-len(suffix)].rstrip("/")
-            break
-
-    payload_dict: Dict[str, Any] = {"query": query, "top_k": top_k, "alpha": 0.5}
-    if allowed_sources is not None:
-        payload_dict["allowed_sources"] = allowed_sources
-    payload = json.dumps(payload_dict).encode("utf-8")
-
-    # Try preferred endpoint first
-    endpoints = [
-        f"{base}/api/v1/threats/match",
-        f"{base}/match",
-        f"{base}/query",
-    ]
-
-    last_err = None
-    for ep in endpoints:
-        req = urllib.request.Request(
-            ep,
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                return json.loads(resp.read().decode("utf-8"))
-        except Exception as e:
-            last_err = e
-            continue
-
-    raise ConnectionError(
-        f"Could not reach Team 2 API at {api_url}. "
-        f"Ensure Team 2's server is running (`uvicorn threat_retrieval_engine.api.main:app`). Details: {last_err}"
-    )
-
-
-def normalize_team2_evidence(evidence_input: Any) -> List[Dict[str, Any]]:
-    """
-    Natively normalizes evidence from Team 2's retrieval engine without requiring an external adapter.
-    Preserves STIX relationships, confidence tier, attribution, and multi-factor similarity.
-    """
-    if evidence_input is None:
+    if not raw_evidence:
         return []
 
-    # If evidence_input is Team 2's MatchResponse
-    if hasattr(evidence_input, "top_matches"):
-        raw_items = evidence_input.top_matches
-    elif isinstance(evidence_input, dict) and "top_matches" in evidence_input:
-        raw_items = evidence_input["top_matches"]
-    elif isinstance(evidence_input, (list, tuple)):
-        raw_items = evidence_input
-    else:
-        raw_items = [evidence_input]
+    # If already a list of dicts with document_id and content, return directly
+    if isinstance(raw_evidence, list) and all(isinstance(x, dict) and "document_id" in x for x in raw_evidence):
+        return raw_evidence
 
-    normalized: List[Dict[str, Any]] = []
-    for item in raw_items:
+    # If wrapped in a dict with top_matches (standard /threats/match payload)
+    if isinstance(raw_evidence, dict) and "top_matches" in raw_evidence:
+        raw_evidence = raw_evidence["top_matches"]
+
+    normalized = []
+    for item in raw_evidence:
         if isinstance(item, dict):
+            chunk_id = item.get("chunk_id") or item.get("id") or "EVIDENCE"
+            score = (
+                item.get("composite_score")
+                if item.get("composite_score") is not None
+                else (item.get("relevance_score") if item.get("relevance_score") is not None else 0.0)
+            )
             citations = item.get("citations", [])
-            chunk_id = item.get("chunk_id") or item.get("document_id") or "EVIDENCE"
-            score = item.get("composite_score") or item.get("relevance_score") or 0.0
             stix = item.get("stix_relationships", [])
             tier = item.get("confidence_tier")
             attr = item.get("attribution", {})
             breakdown = item.get("evidence_breakdown", {})
 
             if citations and isinstance(citations, list) and len(citations) > 0:
-                first_cit = citations[0]
-                if isinstance(first_cit, dict):
-                    doc_id = first_cit.get("doc_id") or first_cit.get("document_id") or chunk_id
-                    content = first_cit.get("text_snippet") or first_cit.get("content") or item.get("text", "")
-                    source = first_cit.get("source_org", "Team 2 Knowledge Base")
-                else:
-                    doc_id = getattr(first_cit, "doc_id", chunk_id)
-                    content = getattr(first_cit, "text_snippet", item.get("text", ""))
-                    source = getattr(first_cit, "source_org", "Team 2 Knowledge Base")
+                for cit in citations:
+                    if isinstance(cit, dict):
+                        doc_id = cit.get("doc_id") or cit.get("document_id") or chunk_id
+                        content = cit.get("text_snippet") or cit.get("content") or item.get("text", "")
+                        source = cit.get("source_org", "Knowledge Base")
+                    else:
+                        doc_id = getattr(cit, "doc_id", chunk_id)
+                        content = getattr(cit, "text_snippet", item.get("text", ""))
+                        source = getattr(cit, "source_org", "Knowledge Base")
+                    normalized.append({
+                        "document_id": str(doc_id),
+                        "relevance_score": float(score),
+                        "content": str(content).strip(),
+                        "source": str(source),
+                        "confidence_tier": tier,
+                        "stix_relationships": stix,
+                        "attribution": attr,
+                        "evidence_breakdown": breakdown,
+                    })
             else:
                 doc_id = item.get("document_id") or chunk_id
                 content = item.get("content") or item.get("text") or ""
-                source = item.get("source", "Team 2 Knowledge Base")
+                source = item.get("source", "Knowledge Base")
+                normalized.append({
+                    "document_id": str(doc_id),
+                    "relevance_score": float(score),
+                    "content": str(content).strip(),
+                    "source": str(source),
+                    "confidence_tier": tier,
+                    "stix_relationships": stix,
+                    "attribution": attr,
+                    "evidence_breakdown": breakdown,
+                })
 
         else:
-            # Pydantic or dataclass object from Team 2 (e.g. TopMatchSchema)
             chunk_id = getattr(item, "chunk_id", "EVIDENCE")
-            score = getattr(item, "composite_score", getattr(item, "relevance_score", 0.0))
+            score = (
+                getattr(item, "composite_score")
+                if getattr(item, "composite_score", None) is not None
+                else (getattr(item, "relevance_score", 0.0) if getattr(item, "relevance_score", None) is not None else 0.0)
+            )
             citations = getattr(item, "citations", [])
             stix = getattr(item, "stix_relationships", [])
             tier = getattr(item, "confidence_tier", None)
@@ -121,25 +93,34 @@ def normalize_team2_evidence(evidence_input: Any) -> List[Dict[str, Any]]:
             breakdown = getattr(item, "evidence_breakdown", {})
 
             if citations and len(citations) > 0:
-                first_cit = citations[0]
-                doc_id = getattr(first_cit, "doc_id", chunk_id)
-                content = getattr(first_cit, "text_snippet", getattr(item, "text", ""))
-                source = getattr(first_cit, "source_org", "Team 2 Knowledge Base")
+                for cit in citations:
+                    doc_id = getattr(cit, "doc_id", chunk_id)
+                    content = getattr(cit, "text_snippet", getattr(item, "text", ""))
+                    source = getattr(cit, "source_org", "Knowledge Base")
+                    normalized.append({
+                        "document_id": str(doc_id),
+                        "relevance_score": float(score),
+                        "content": str(content).strip(),
+                        "source": str(source),
+                        "confidence_tier": tier,
+                        "stix_relationships": stix,
+                        "attribution": attr,
+                        "evidence_breakdown": breakdown,
+                    })
             else:
                 doc_id = getattr(item, "document_id", chunk_id)
                 content = getattr(item, "content", getattr(item, "text", ""))
-                source = getattr(item, "source", "Team 2 Knowledge Base")
-
-        normalized.append({
-            "document_id": str(doc_id),
-            "relevance_score": float(score),
-            "content": str(content).strip(),
-            "source": str(source),
-            "confidence_tier": tier,
-            "stix_relationships": stix,
-            "attribution": attr,
-            "evidence_breakdown": breakdown,
-        })
+                source = getattr(item, "source", "Knowledge Base")
+                normalized.append({
+                    "document_id": str(doc_id),
+                    "relevance_score": float(score),
+                    "content": str(content).strip(),
+                    "source": str(source),
+                    "confidence_tier": tier,
+                    "stix_relationships": stix,
+                    "attribution": attr,
+                    "evidence_breakdown": breakdown,
+                })
 
     return normalized
 
@@ -150,33 +131,64 @@ class ThreatInvestigator:
     def __init__(self, provider: LLMProvider):
         self.provider = provider
 
+    def fetch_retrieval_evidence(
+        self,
+        observation: str,
+        api_url: str = "http://localhost:8000",
+        top_k: int = 5,
+        allowed_sources: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Directly queries the Threat Retrieval & Matching REST API.
+        """
+        endpoint = f"{api_url.rstrip('/')}/api/v1/threats/match"
+        payload = {
+            "query": observation,
+            "top_k": top_k,
+            "alpha": 0.5,
+            "include_pocs": False,
+        }
+        if allowed_sources:
+            payload["allowed_sources"] = allowed_sources
+
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            endpoint,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+                return normalize_team2_evidence(result)
+        except Exception as e:
+            print(f"WARN: Could not fetch evidence from retrieval API: {e}. Proceeding offline.")
+            return []
+
     def investigate(
         self,
         observation: str,
-        retrieved_evidence: Any = None,
+        retrieved_evidence: Optional[Any] = None,
         team2_api_url: Optional[str] = None,
         allowed_sources: Optional[List[str]] = None,
     ) -> InvestigationResult:
         """
-        Synthesizes historical evidence to assess a newly observed threat.
-        If retrieved_evidence is None, automatically POSTs the query to Team 2's API!
-        Natively accepts Team 2's direct MatchResponse or TopMatchSchema output.
-        Enforces source citations and anti-hallucination guardrails.
+        Executes an evidence-grounded threat investigation.
         """
         if not observation or not observation.strip():
-            raise ValueError("Observation cannot be empty.")
+            raise ValueError("Observation text cannot be empty.")
 
-        # If evidence was not pre-fetched, query Team 2's existing API directly
-        if retrieved_evidence is None:
-            url = team2_api_url or os.getenv("TEAM2_API_URL", "http://localhost:8000")
-            retrieved_evidence = fetch_team2_evidence(
-                query=observation,
-                api_url=url,
-                allowed_sources=allowed_sources,
+        # If live retrieval URL is provided, query it automatically
+        if team2_api_url and not retrieved_evidence:
+            clean_evidence = self.fetch_retrieval_evidence(
+                observation,
+                api_url=team2_api_url,
+                allowed_sources=allowed_sources
             )
-
-        # Natively normalize Team 2 format into standard evidence list
-        clean_evidence = normalize_team2_evidence(retrieved_evidence)
+        else:
+            clean_evidence = normalize_team2_evidence(retrieved_evidence)
 
         prompt = build_investigation_prompt(observation, clean_evidence)
 
@@ -198,18 +210,16 @@ class ThreatInvestigator:
                 doc_id_map[f"doc-{idx}".lower()] = real_id
                 doc_id_map[f"doc #{idx}".lower()] = real_id
                 doc_id_map[f"doc {idx}".lower()] = real_id
-                # Map without underscores/suffixes (e.g. CVE-2017-0144_EPSS -> CVE-2017-0144)
-                base_cve = real_id.split("_")[0]
-                doc_id_map[base_cve.lower()] = real_id
+                # Only set base_cve if not already mapped to avoid collision overwrites
+                base_cve = real_id.split("_")[0].lower()
+                if base_cve.startswith("cve-") and base_cve not in doc_id_map:
+                    doc_id_map[base_cve] = real_id
 
         for citation in result.supporting_citations:
             raw_cid = (citation.document_id or "").strip().lower()
             if raw_cid in doc_id_map:
-                # Resolve recognized ordinal or base alias (e.g. 'Evidence #1') to the authoritative document ID
                 citation.document_id = doc_id_map[raw_cid]
             else:
-                # Do NOT forcibly overwrite unknown/hallucinated document IDs.
-                # Preserve the model's actual citation and flag as unverified for evaluation integrity.
                 citation.key_excerpt = f"[Unverified Citation: {citation.document_id}] {citation.key_excerpt}"
 
         return result

@@ -3,7 +3,7 @@ Schema for Workflow 2: Structured Cybersecurity Entity Extraction.
 Converts unstructured threat intelligence text into standardized machine-readable entities.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Any, Dict, Union
 import json
 import re
 
@@ -46,12 +46,16 @@ if PYDANTIC_AVAILABLE:
         @field_validator("vulnerabilities", mode="before")
         @classmethod
         def sanitize_vulnerabilities(cls, v: Any):
-            """Gracefully filters out placeholder entries like cve_id='N/A' or 'None' when no CVE is present."""
+            """Filters and coerces entries into valid VulnerabilityReference objects."""
             if not isinstance(v, list):
                 return []
             valid = []
             for item in v:
-                if isinstance(item, dict):
+                if isinstance(item, str):
+                    cid = item.strip().upper()
+                    if re.match(r"^CVE-\d{4}-\d{4,8}$", cid):
+                        valid.append({"cve_id": cid})
+                elif isinstance(item, dict):
                     cid = str(item.get("cve_id", "")).strip().upper()
                     if re.match(r"^CVE-\d{4}-\d{4,8}$", cid):
                         valid.append(item)
@@ -59,6 +63,36 @@ if PYDANTIC_AVAILABLE:
                     cid = str(getattr(item, "cve_id", "")).strip().upper()
                     if re.match(r"^CVE-\d{4}-\d{4,8}$", cid):
                         valid.append(item)
+            return valid
+
+        @field_validator("iocs", mode="before")
+        @classmethod
+        def sanitize_iocs(cls, v: Any):
+            """Coerces strings or dicts into valid IndicatorOfCompromise objects."""
+            if not isinstance(v, list):
+                return []
+            valid = []
+            for item in v:
+                if isinstance(item, str):
+                    val = item.strip()
+                    if not val:
+                        continue
+                    ioc_type = "unknown"
+                    if re.match(r"^\d{1,3}(\.\d{1,3}){3}$", val):
+                        ioc_type = "ipv4"
+                    elif re.match(r"^[a-fA-F0-9]{64}$", val):
+                        ioc_type = "sha256"
+                    elif re.match(r"^[a-fA-F0-9]{32}$", val):
+                        ioc_type = "md5"
+                    elif re.match(r"^https?://", val, re.IGNORECASE):
+                        ioc_type = "url"
+                    elif "." in val and not val.endswith("."):
+                        ioc_type = "domain"
+                    valid.append({"type": ioc_type, "value": val})
+                elif isinstance(item, dict) and "type" in item and "value" in item:
+                    valid.append(item)
+                elif hasattr(item, "type") and hasattr(item, "value"):
+                    valid.append(item)
             return valid
 
         def to_dict(self):
@@ -116,8 +150,28 @@ else:
 
         @classmethod
         def model_validate(cls, obj):
-            vulns = [VulnerabilityReference(**v) if isinstance(v, dict) else v for v in obj.get("vulnerabilities", [])]
-            iocs = [IndicatorOfCompromise(**i) if isinstance(i, dict) else i for i in obj.get("iocs", [])]
+            vulns = []
+            for v in obj.get("vulnerabilities", []):
+                if isinstance(v, str) and re.match(r"^CVE-\d{4}-\d{4,8}$", v.strip().upper()):
+                    vulns.append(VulnerabilityReference(cve_id=v.strip().upper()))
+                elif isinstance(v, dict):
+                    vuln_keys = {"cve_id", "description", "severity"}
+                    vulns.append(VulnerabilityReference(**{k: val for k, val in v.items() if k in vuln_keys}))
+                elif hasattr(v, "cve_id"):
+                    vulns.append(v)
+
+            iocs = []
+            for i in obj.get("iocs", []):
+                if isinstance(i, str):
+                    val = i.strip()
+                    ioc_type = "ipv4" if re.match(r"^\d{1,3}(\.\d{1,3}){3}$", val) else "domain"
+                    iocs.append(IndicatorOfCompromise(type=ioc_type, value=val))
+                elif isinstance(i, dict):
+                    ioc_keys = {"type", "value", "source_feed", "context"}
+                    iocs.append(IndicatorOfCompromise(**{k: val for k, val in i.items() if k in ioc_keys}))
+                elif hasattr(i, "type"):
+                    iocs.append(i)
+
             return cls(
                 threat_actors=obj.get("threat_actors", []),
                 malware_families=obj.get("malware_families", []),
