@@ -29,11 +29,11 @@ class GeminiProvider(LLMProvider):
         max_tokens: int = 2000,
         **kwargs,
     ) -> str:
-        if not self.api_key:
-            raise LLMGatewayError("Gemini API key is not set (GEMINI_API_KEY), so the AI model could not be reached.")
+        if not self.api_key or not self.api_key.strip():
+            raise LLMGatewayError("GEMINI_API_KEY is not set or empty. Please configure GEMINI_API_KEY in .env or switch to Ollama in System Config.")
 
-        timeout = self.config.get("timeout", 120)
-        max_retries = self.config.get("max_retries", 10)
+        timeout = self.config.get("timeout", 12)
+        max_retries = self.config.get("max_retries", 2)
         
         # Combine system prompt with user prompt
         combined_prompt = prompt
@@ -95,8 +95,8 @@ class GeminiProvider(LLMProvider):
                     continue
                 elif e.code == 429:
                     if attempt == max_retries - 1:
-                        raise LLMGatewayError(f"Gemini Rate Limit Exceeded (429) after {max_retries} attempts: {err_body}")
-                    wait_time = min(30, (2 ** attempt) + 2)
+                        raise LLMGatewayError("Gemini Rate Limit Exceeded (429). The Google API quota was reached. Please wait a moment or switch to Ollama.")
+                    wait_time = min(3, 2 ** attempt)
                     print(f"INFO: Gemini rate limit (429). Backing off for {wait_time}s (attempt {attempt+1}/{max_retries})...")
                     time.sleep(wait_time)
                     continue
@@ -106,17 +106,15 @@ class GeminiProvider(LLMProvider):
             except urllib.error.URLError as e:
                 if "timeout" in str(e.reason).lower():
                     if attempt == max_retries - 1:
-                        raise LLMTimeoutError("Gemini request timed out.")
-                    print(f"INFO: Gemini request timed out. Retrying attempt {attempt+1}/{max_retries}...")
-                    time.sleep(2 ** attempt)
+                        raise LLMTimeoutError("Gemini request timed out after 12s. Check network connection or switch to Ollama.")
+                    time.sleep(1)
                     continue
-                raise LLMGatewayError(f"Gemini request failed: {e.reason}")
+                raise LLMGatewayError(f"Cannot connect to Gemini: {e.reason}. Check internet access or switch to Ollama.")
                 
             except TimeoutError as e:
                 if attempt == max_retries - 1:
-                    raise LLMTimeoutError("Gemini request timed out.")
-                print(f"INFO: Gemini request timed out (TimeoutError). Retrying attempt {attempt+1}/{max_retries}...")
-                time.sleep(2 ** attempt)
+                    raise LLMTimeoutError("Gemini request timed out after 12s. Check network connection or switch to Ollama.")
+                time.sleep(1)
                 continue
                 
             except LLMGatewayError:
